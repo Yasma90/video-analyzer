@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# FFmpeg (binarios grandes)
+ffmpeg-*/
+ffmpeg.zip
+
+# Configuracion local del usuario
+config.json
+
+# Videos y archivos de usuario
+video/
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.mp3
+*.wav
+
+# Archivos de analisis generados
+*_analysis.md
+*_analysis.txt
+*_analysis.json
+
+# Archivos temporales
+temp_audio.mp3
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Archivos no relacionados
+*Cópia*
+*_Copia*
