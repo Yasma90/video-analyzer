@@ -181,9 +181,9 @@ class SettingsDialog:
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("Configuracion Avanzada")
 
-        # Tamaño fijo compacto
-        win_w = 420
-        win_h = 450
+        # Tamaño completo para mostrar todo sin scroll
+        win_w = 580
+        win_h = 920
 
         # Centrar sobre la ventana padre (misma pantalla)
         parent.update_idletasks()
@@ -197,7 +197,7 @@ class SettingsDialog:
 
         self.dialog.geometry(f"{win_w}x{win_h}+{x}+{y}")
         self.dialog.resizable(True, True)
-        self.dialog.minsize(380, 400)
+        self.dialog.minsize(550, 850)
         self.dialog.transient(parent)
         self.dialog.grab_set()
 
@@ -401,7 +401,7 @@ class VideoAnalyzerGUI:
             scale = 1.0
 
         # Tamaño más conservador
-        base_w, base_h = 680, 420
+        base_w, base_h = 780, 530
         win_w = int(base_w * scale)
         win_h = int(base_h * scale)
 
@@ -585,7 +585,7 @@ class VideoAnalyzerGUI:
     def _create_video_card(self, parent):
         """Card de seleccion de video"""
         t = self.theme
-        content = self._create_card(parent, "VIDEO", height=60)
+        content = self._create_card(parent, "VIDEO", height=115)
 
         # Drop zone
         self.drop_zone = tk.Frame(content, bg=t['accent'], relief=tk.FLAT,
@@ -609,7 +609,7 @@ class VideoAnalyzerGUI:
     def _create_config_card(self, parent):
         """Card de configuracion rapida"""
         t = self.theme
-        content = self._create_card(parent, "CONFIGURACION", height=105)
+        content = self._create_card(parent, "CONFIGURACION", height=145)
 
         # Idioma
         row = tk.Frame(content, bg=t['card'])
