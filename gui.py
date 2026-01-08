@@ -401,7 +401,7 @@ class VideoAnalyzerGUI:
             scale = 1.0
 
         # Tamaño más conservador
-        base_w, base_h = 720, 440
+        base_w, base_h = 680, 420
         win_w = int(base_w * scale)
         win_h = int(base_h * scale)
 
@@ -609,7 +609,7 @@ class VideoAnalyzerGUI:
     def _create_config_card(self, parent):
         """Card de configuracion rapida"""
         t = self.theme
-        content = self._create_card(parent, "CONFIGURACION", height=90)
+        content = self._create_card(parent, "CONFIGURACION", height=105)
 
         # Idioma
         row = tk.Frame(content, bg=t['card'])
