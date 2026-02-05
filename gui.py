@@ -318,9 +318,6 @@ class SettingsDialog:
                 bg=input_bg, fg=fg, insertbackground=fg, show='*',
                 relief=tk.SOLID, bd=1).pack(side=tk.LEFT)
 
-        # Actualizar visibilidad inicial
-        self._on_provider_change()
-
         # === SECCION: SALIDA ===
         self._section(main, "SALIDA", bg, fg_dim, border)
 
@@ -442,6 +439,9 @@ class SettingsDialog:
         # Forzar actualizacion del scrollregion para incluir los botones
         main.update_idletasks()
         canvas.configure(scrollregion=canvas.bbox("all"))
+
+        # Actualizar visibilidad inicial de secciones segun proveedor
+        self._on_provider_change()
 
     def _section(self, parent, title, bg, fg_dim, border):
         """Crea encabezado de seccion"""
