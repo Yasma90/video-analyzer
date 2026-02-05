@@ -420,7 +420,7 @@ class SettingsDialog:
 
         # === BOTONES ===
         btn_frame = tk.Frame(main, bg=bg)
-        btn_frame.pack(fill=tk.X, pady=(15, 5))
+        btn_frame.pack(fill=tk.X, pady=(20, 20))
 
         # GUARDAR primero, CANCELAR segundo
         btn_save = tk.Button(btn_frame, text="GUARDAR", command=self._save,
@@ -768,8 +768,8 @@ class VideoAnalyzerGUI:
         tk.Label(row, text=f"IA: {provider.title()}", bg=t['card'], fg=t['text'],
                 font=('Segoe UI', 10), width=16, anchor='w').pack(side=tk.LEFT)
         self.ai_model_display = tk.Label(row, text=model_name,
-                                         bg=t['card'], fg=t['text_dim'],
-                                         font=('Segoe UI', 9))
+                                         bg=t['card'], fg=t['text'],
+                                         font=('Segoe UI', 9, 'bold'))
         self.ai_model_display.pack(side=tk.LEFT)
 
         # Carpeta salida
