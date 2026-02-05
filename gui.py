@@ -1186,6 +1186,7 @@ class VideoAnalyzerGUI:
     def _process_video(self):
         """Procesa el video"""
         try:
+            import json
             import torch
             import whisper
             from moviepy import VideoFileClip
