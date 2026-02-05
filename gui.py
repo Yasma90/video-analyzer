@@ -1147,8 +1147,10 @@ class VideoAnalyzerGUI:
             # === PASO 2: Transcribir ===
             self._update_step(1, "running")
             self._update_progress_text("Transcribiendo con Whisper...")
+            self._append_result(f"\n[PASO 2/6] Cargando modelo Whisper '{cfg['whisper_model']}'...")
 
             model = whisper.load_model(cfg['whisper_model'], device=device)
+            self._append_result(f"Modelo cargado. Iniciando transcripcion...")
             result = model.transcribe(str(audio_path), language=cfg['language'],
                                       fp16=(device == "cuda"))
 
@@ -1170,6 +1172,7 @@ class VideoAnalyzerGUI:
             # === PASO 3: Resumen ===
             self._update_step(2, "running")
             self._update_progress_text("Generando resumen con IA...")
+            self._append_result(f"\n[PASO 3/6] Generando resumen ejecutivo con {provider.title()}...")
 
             summary = self._query_ai(
                 """IMPORTANTE: Responde UNICAMENTE en español.
@@ -1187,6 +1190,7 @@ Genera un RESUMEN EJECUTIVO conciso del siguiente contenido.
             # === PASO 4: Puntos clave ===
             self._update_step(3, "running")
             self._update_progress_text("Extrayendo puntos clave...")
+            self._append_result(f"\n[PASO 4/6] Extrayendo puntos clave del contenido...")
 
             key_points = self._query_ai(
                 """IMPORTANTE: Responde UNICAMENTE en español.
@@ -1204,6 +1208,7 @@ Extrae los 8-10 PUNTOS CLAVE mas importantes del contenido.
             # === PASO 5: Analisis ===
             self._update_step(4, "running")
             self._update_progress_text("Generando analisis detallado...")
+            self._append_result(f"\n[PASO 5/6] Generando analisis detallado del video...")
 
             analysis = self._query_ai(
                 """IMPORTANTE: Responde UNICAMENTE en español.
@@ -1233,6 +1238,7 @@ A quien va dirigido este contenido.""",
             # === PASO 6: Guardar ===
             self._update_step(5, "running")
             self._update_progress_text("Guardando reporte...")
+            self._append_result(f"\n[PASO 6/6] Generando reporte final...")
 
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -1318,9 +1324,33 @@ A quien va dirigido este contenido.""",
             self.root.after(0, lambda: self.btn_open.config(state=tk.NORMAL))
 
         except Exception as e:
-            self._append_result(f"\n\nERROR: {str(e)}")
+            import traceback
+            error_details = traceback.format_exc()
+
+            # Mostrar en el panel
+            self._append_result(f"\n\n{'='*50}")
+            self._append_result("ERROR DURANTE EL PROCESAMIENTO")
+            self._append_result(f"{'='*50}")
+            self._append_result(f"\nError: {str(e)}")
+            self._append_result(f"\nVer detalles completos en: error_log.txt")
             self._update_progress_text(f"Error: {str(e)[:40]}...")
 
+            # Guardar log de error
+            try:
+                log_file = self.video_path.parent / "error_log.txt" if self.video_path else Path("error_log.txt")
+                with open(log_file, 'w', encoding='utf-8') as f:
+                    f.write(f"ERROR EN VIDEO ANALYZER - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                    f.write(f"{'='*70}\n\n")
+                    f.write(f"Video: {self.video_path if self.video_path else 'N/A'}\n")
+                    f.write(f"Configuracion:\n")
+                    f.write(f"  - Whisper: {cfg.get('whisper_model', 'N/A')}\n")
+                    f.write(f"  - AI Provider: {cfg.get('ai_provider', 'N/A')}\n")
+                    f.write(f"  - GPU: {cfg.get('use_gpu', 'N/A')}\n\n")
+                    f.write(f"ERROR:\n{error_details}\n")
+            except:
+                pass  # Si falla guardar el log, no es crítico
+
+            # Marcar paso actual como error
             for i, ind in enumerate(self.step_indicators):
                 if ind.cget('text') == "[>>]":
                     self._update_step(i, "error", str(e)[:20])
