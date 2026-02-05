@@ -40,14 +40,18 @@ CONFIG_FILE = script_dir / "config.json"
 DEFAULT_CONFIG = {
     "theme": "dark",
     "whisper_model": "small",
+    "ai_provider": "ollama",  # "ollama" or "claude"
     "ollama_model": "llama2",
+    "claude_model": "claude-sonnet-4-5-20250929",
+    "claude_api_key": "",
     "language": "es",
     "output_dir": "",
     "output_format": "md",
     "use_gpu": True,
     "delete_temp_audio": True,
     "ollama_ctx": 8192,
-    "ollama_temp": 0.7
+    "ollama_temp": 0.7,
+    "claude_max_tokens": 4096
 }
 
 THEMES = {
@@ -227,8 +231,20 @@ class SettingsDialog:
 
         # Scroll con rueda del mouse
         def on_mousewheel(event):
-            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-        canvas.bind_all("<MouseWheel>", on_mousewheel)
+            try:
+                if canvas.winfo_exists():
+                    canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            except tk.TclError:
+                pass
+
+        # Bind mousewheel solo a este canvas
+        canvas.bind("<MouseWheel>", on_mousewheel)
+        # También bind a los widgets internos para que funcione cuando el mouse está sobre ellos
+        main.bind("<MouseWheel>", on_mousewheel)
+
+        # Guardar referencias para cleanup
+        self.canvas = canvas
+        self.main_frame = main
 
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -251,18 +267,58 @@ class SettingsDialog:
                                       width=18, state='readonly')
         whisper_combo.pack(side=tk.LEFT)
 
-        # Ollama
+        # AI Provider
         row = tk.Frame(main, bg=bg)
         row.pack(fill=tk.X, pady=5)
-        tk.Label(row, text="Modelo Ollama:", width=18, anchor='w',
+        tk.Label(row, text="Proveedor IA:", width=18, anchor='w',
+                bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
+        self.provider_var = tk.StringVar(value=self.config.get('ai_provider', 'ollama'))
+        provider_combo = ttk.Combobox(row, textvariable=self.provider_var,
+                                      values=["ollama", "claude"],
+                                      width=18, state='readonly')
+        provider_combo.pack(side=tk.LEFT)
+        provider_combo.bind('<<ComboboxSelected>>', self._on_provider_change)
+
+        # Ollama
+        self.ollama_row = tk.Frame(main, bg=bg)
+        self.ollama_row.pack(fill=tk.X, pady=5)
+        tk.Label(self.ollama_row, text="Modelo Ollama:", width=18, anchor='w',
                 bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
         self.ollama_var = tk.StringVar(value=self.config['ollama_model'])
         ollama_models = get_ollama_models()
         if self.config['ollama_model'] not in ollama_models:
             ollama_models.insert(0, self.config['ollama_model'])
-        ollama_combo = ttk.Combobox(row, textvariable=self.ollama_var,
+        ollama_combo = ttk.Combobox(self.ollama_row, textvariable=self.ollama_var,
                                      values=ollama_models, width=18)
         ollama_combo.pack(side=tk.LEFT)
+
+        # Claude
+        self.claude_row = tk.Frame(main, bg=bg)
+        self.claude_row.pack(fill=tk.X, pady=5)
+        tk.Label(self.claude_row, text="Modelo Claude:", width=18, anchor='w',
+                bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
+        self.claude_model_var = tk.StringVar(value=self.config.get('claude_model', 'claude-sonnet-4-5-20250929'))
+        claude_combo = ttk.Combobox(self.claude_row, textvariable=self.claude_model_var,
+                                     values=[
+                                         "claude-sonnet-4-5-20250929",
+                                         "claude-opus-4-5-20251101",
+                                         "claude-3-5-sonnet-20241022",
+                                         "claude-3-5-haiku-20241022"
+                                     ], width=18)
+        claude_combo.pack(side=tk.LEFT)
+
+        # Claude API Key
+        self.api_key_row = tk.Frame(main, bg=bg)
+        self.api_key_row.pack(fill=tk.X, pady=5)
+        tk.Label(self.api_key_row, text="API Key Claude:", width=18, anchor='w',
+                bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
+        self.api_key_var = tk.StringVar(value=self.config.get('claude_api_key', ''))
+        tk.Entry(self.api_key_row, textvariable=self.api_key_var, width=22,
+                bg=input_bg, fg=fg, insertbackground=fg, show='*',
+                relief=tk.SOLID, bd=1).pack(side=tk.LEFT)
+
+        # Actualizar visibilidad inicial
+        self._on_provider_change()
 
         # === SECCION: SALIDA ===
         self._section(main, "SALIDA", bg, fg_dim, border)
@@ -344,7 +400,7 @@ class SettingsDialog:
                             activebackground='#218838', activeforeground='white')
         btn_save.pack(side=tk.LEFT, padx=(0, 8))
 
-        btn_cancel = tk.Button(btn_frame, text="CANCELAR", command=self.dialog.destroy,
+        btn_cancel = tk.Button(btn_frame, text="CANCELAR", command=self._cleanup_and_close,
                               width=10, padx=8, pady=5,
                               bg='#dc3545', fg='white',
                               font=('Segoe UI', 9, 'bold'),
@@ -360,6 +416,18 @@ class SettingsDialog:
                 bg=bg, fg=fg_dim).pack(side=tk.LEFT)
         tk.Frame(frame, bg=border, height=1).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(10,0))
 
+    def _on_provider_change(self, event=None):
+        """Muestra/oculta controles según el proveedor seleccionado"""
+        provider = self.provider_var.get()
+        if provider == "ollama":
+            self.ollama_row.pack(fill=tk.X, pady=5)
+            self.claude_row.pack_forget()
+            self.api_key_row.pack_forget()
+        else:  # claude
+            self.ollama_row.pack_forget()
+            self.claude_row.pack(fill=tk.X, pady=5)
+            self.api_key_row.pack(fill=tk.X, pady=5)
+
     def _browse_output(self):
         path = filedialog.askdirectory(title="Seleccionar carpeta de salida")
         if path:
@@ -368,7 +436,10 @@ class SettingsDialog:
     def _save(self):
         self.result = {
             'whisper_model': self.whisper_var.get(),
+            'ai_provider': self.provider_var.get(),
             'ollama_model': self.ollama_var.get(),
+            'claude_model': self.claude_model_var.get(),
+            'claude_api_key': self.api_key_var.get(),
             'output_dir': self.output_var.get(),
             'output_format': self.format_var.get(),
             'use_gpu': self.gpu_var.get(),
@@ -376,6 +447,15 @@ class SettingsDialog:
             'ollama_ctx': int(self.ctx_var.get()),
             'ollama_temp': self.temp_slider.get()
         }
+        self._cleanup_and_close()
+
+    def _cleanup_and_close(self):
+        """Cleanup bindings and close dialog"""
+        try:
+            self.canvas.unbind("<MouseWheel>")
+            self.main_frame.unbind("<MouseWheel>")
+        except:
+            pass
         self.dialog.destroy()
 
 # ============================================================================
@@ -632,20 +712,24 @@ class VideoAnalyzerGUI:
                 font=('Segoe UI', 10), width=16, anchor='w').pack(side=tk.LEFT)
         self.whisper_var = tk.StringVar(value=self.config['whisper_model'])
         ttk.Combobox(row, textvariable=self.whisper_var,
-                     values=["tiny", "base", "small", "medium"], width=10,
+                     values=["tiny", "base", "small", "medium", "large"], width=10,
                      state='readonly').pack(side=tk.LEFT)
 
-        # Modelo Ollama
+        # AI Provider & Model
         row = tk.Frame(content, bg=t['card'])
         row.pack(fill=tk.X, pady=3)
-        tk.Label(row, text="Modelo Ollama:", bg=t['card'], fg=t['text'],
+        provider = self.config.get('ai_provider', 'ollama')
+        if provider == 'ollama':
+            model_name = self.config['ollama_model']
+        else:
+            model_name = self.config.get('claude_model', 'claude')[:20]
+
+        tk.Label(row, text=f"IA: {provider.title()}", bg=t['card'], fg=t['text'],
                 font=('Segoe UI', 10), width=16, anchor='w').pack(side=tk.LEFT)
-        self.ollama_var = tk.StringVar(value=self.config['ollama_model'])
-        ollama_models = get_ollama_models()
-        if self.config['ollama_model'] not in ollama_models:
-            ollama_models.insert(0, self.config['ollama_model'])
-        ttk.Combobox(row, textvariable=self.ollama_var,
-                     values=ollama_models, width=10).pack(side=tk.LEFT)
+        self.ai_model_display = tk.Label(row, text=model_name,
+                                         bg=t['card'], fg=t['text_dim'],
+                                         font=('Segoe UI', 9))
+        self.ai_model_display.pack(side=tk.LEFT)
 
         # Carpeta salida
         row = tk.Frame(content, bg=t['card'])
@@ -751,10 +835,28 @@ class VideoAnalyzerGUI:
         self.root.bind('<Escape>', lambda e: self._cancel_processing() if self.is_processing else None)
 
     def _setup_dnd(self):
-        """Configura drag and drop (basico con tkinter)"""
-        # Nota: Para DnD completo necesitariamos tkinterdnd2, pero es una dependencia extra
-        # Por ahora el click funciona como alternativa
-        pass
+        """Configura drag and drop"""
+        try:
+            from tkinterdnd2 import DND_FILES, TkinterDnD
+            # Habilitar DnD en el drop zone
+            self.drop_zone.drop_target_register(DND_FILES)
+            self.drop_zone.dnd_bind('<<Drop>>', self._on_drop)
+        except ImportError:
+            # Si no está instalado tkinterdnd2, solo usar click
+            pass
+
+    def _on_drop(self, event):
+        """Maneja el evento de arrastrar y soltar"""
+        # Limpiar el path (viene entre llaves en Windows)
+        file_path = event.data.strip('{}')
+        path = Path(file_path)
+
+        # Verificar que sea un archivo de video
+        video_extensions = ['.mp4', '.avi', '.mkv', '.mov', '.webm', '.wmv', '.flv']
+        if path.suffix.lower() in video_extensions:
+            self._set_video(path)
+        else:
+            messagebox.showwarning("Advertencia", "Por favor arrastra un archivo de video válido")
 
     def _on_language_change(self, event=None):
         """Actualiza nombre del idioma"""
@@ -786,7 +888,15 @@ class VideoAnalyzerGUI:
 
             # Actualizar UI
             self.whisper_var.set(self.config['whisper_model'])
-            self.ollama_var.set(self.config['ollama_model'])
+
+            # Actualizar display del modelo de IA
+            provider = self.config.get('ai_provider', 'ollama')
+            if provider == 'ollama':
+                model_name = self.config['ollama_model']
+            else:
+                model_name = self.config.get('claude_model', 'claude')[:20]
+            self.ai_model_display.config(text=model_name)
+
             if self.config['output_dir']:
                 self.output_display.config(text=Path(self.config['output_dir']).name)
 
@@ -971,13 +1081,19 @@ class VideoAnalyzerGUI:
             self._append_result(f"\nArchivo: {self.video_path.name}")
             self._append_result(f"Dispositivo: {device.upper()}")
             self._append_result(f"Whisper: {cfg['whisper_model']}")
-            self._append_result(f"Ollama: {cfg['ollama_model']}\n")
+            provider = cfg.get('ai_provider', 'ollama')
+            if provider == 'ollama':
+                self._append_result(f"IA: Ollama ({cfg['ollama_model']})\n")
+            else:
+                self._append_result(f"IA: Claude ({cfg.get('claude_model', 'sonnet')})\n")
 
             # === PASO 1: Audio ===
             self._update_step(0, "running")
             self._update_progress_text("Extrayendo audio del video...")
 
-            audio_path = self.video_path.parent / "temp_audio.mp3"
+            # Usar el nombre del video para el archivo de audio
+            audio_filename = f"{self.video_path.stem}_audio.mp3" if not cfg['delete_temp_audio'] else "temp_audio.mp3"
+            audio_path = self.video_path.parent / audio_filename
             video = VideoFileClip(str(self.video_path))
             duration = video.duration
             video.audio.write_audiofile(str(audio_path))
@@ -1015,7 +1131,7 @@ class VideoAnalyzerGUI:
             self._update_step(2, "running")
             self._update_progress_text("Generando resumen con IA...")
 
-            summary = self._query_ollama(
+            summary = self._query_ai(
                 """IMPORTANTE: Responde UNICAMENTE en español.
 Genera un RESUMEN EJECUTIVO conciso del siguiente contenido.
 - Maximo 3 parrafos
@@ -1032,7 +1148,7 @@ Genera un RESUMEN EJECUTIVO conciso del siguiente contenido.
             self._update_step(3, "running")
             self._update_progress_text("Extrayendo puntos clave...")
 
-            key_points = self._query_ollama(
+            key_points = self._query_ai(
                 """IMPORTANTE: Responde UNICAMENTE en español.
 Extrae los 8-10 PUNTOS CLAVE mas importantes del contenido.
 - Usa vinetas (-)
@@ -1049,7 +1165,7 @@ Extrae los 8-10 PUNTOS CLAVE mas importantes del contenido.
             self._update_step(4, "running")
             self._update_progress_text("Generando analisis detallado...")
 
-            analysis = self._query_ollama(
+            analysis = self._query_ai(
                 """IMPORTANTE: Responde UNICAMENTE en español.
 Realiza un ANALISIS DETALLADO del contenido con la siguiente estructura:
 
@@ -1173,6 +1289,42 @@ A quien va dirigido este contenido.""",
         finally:
             self.is_processing = False
             self.root.after(0, self._processing_finished)
+
+    def _query_ai(self, instruction, text):
+        """Consulta el proveedor de IA configurado (Ollama o Claude)"""
+        cfg = self.config
+        provider = cfg.get('ai_provider', 'ollama')
+
+        if provider == 'claude':
+            return self._query_claude(instruction, text)
+        else:
+            return self._query_ollama(instruction, text)
+
+    def _query_claude(self, instruction, text):
+        """Consulta Claude API"""
+        cfg = self.config
+        api_key = cfg.get('claude_api_key', '')
+
+        if not api_key:
+            raise ValueError("API Key de Claude no configurada. Ve a Ajustes > Configuracion Avanzada.")
+
+        try:
+            import anthropic
+        except ImportError:
+            raise ValueError("Instala el paquete 'anthropic': pip install anthropic")
+
+        client = anthropic.Anthropic(api_key=api_key)
+
+        message = client.messages.create(
+            model=cfg.get('claude_model', 'claude-sonnet-4-5-20250929'),
+            max_tokens=cfg.get('claude_max_tokens', 4096),
+            messages=[{
+                "role": "user",
+                "content": f"{instruction}\n\nTEXTO:\n{text}"
+            }]
+        )
+
+        return message.content[0].text
 
     def _query_ollama(self, instruction, text):
         """Consulta Ollama"""

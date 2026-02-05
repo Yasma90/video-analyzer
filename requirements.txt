@@ -4,3 +4,5 @@ ollama
 torch
 torchvision
 torchaudio
+anthropic
+tkinterdnd2
