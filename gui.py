@@ -439,6 +439,10 @@ class SettingsDialog:
                               activebackground='#c82333', activeforeground='white')
         btn_cancel.pack(side=tk.LEFT)
 
+        # Forzar actualizacion del scrollregion para incluir los botones
+        main.update_idletasks()
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
     def _section(self, parent, title, bg, fg_dim, border):
         """Crea encabezado de seccion"""
         frame = tk.Frame(parent, bg=bg)
@@ -466,6 +470,10 @@ class SettingsDialog:
             self.claude_row.pack(fill=tk.X, pady=5)
             self.api_key_row.pack(fill=tk.X, pady=5)
             self.claude_advanced_section.pack(fill=tk.X)
+
+        # Actualizar scrollregion despues de cambiar visibilidad
+        self.main_frame.update_idletasks()
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     def _browse_output(self):
         path = filedialog.askdirectory(title="Seleccionar carpeta de salida")
@@ -765,8 +773,10 @@ class VideoAnalyzerGUI:
         else:
             model_name = self.config.get('claude_model', 'claude')[:20]
 
-        tk.Label(row, text=f"IA: {provider.title()}", bg=t['card'], fg=t['text'],
-                font=('Segoe UI', 10), width=16, anchor='w').pack(side=tk.LEFT)
+        self.ai_provider_display = tk.Label(row, text=f"IA: {provider.title()}",
+                                           bg=t['card'], fg=t['text'],
+                                           font=('Segoe UI', 10), width=16, anchor='w')
+        self.ai_provider_display.pack(side=tk.LEFT)
         self.ai_model_display = tk.Label(row, text=model_name,
                                          bg=t['card'], fg=t['text'],
                                          font=('Segoe UI', 9, 'bold'))
@@ -930,12 +940,14 @@ class VideoAnalyzerGUI:
             # Actualizar UI
             self.whisper_var.set(self.config['whisper_model'])
 
-            # Actualizar display del modelo de IA
+            # Actualizar display del proveedor y modelo de IA
             provider = self.config.get('ai_provider', 'ollama')
             if provider == 'ollama':
                 model_name = self.config['ollama_model']
             else:
                 model_name = self.config.get('claude_model', 'claude')[:20]
+
+            self.ai_provider_display.config(text=f"IA: {provider.title()}")
             self.ai_model_display.config(text=model_name)
 
             if self.config['output_dir']:
