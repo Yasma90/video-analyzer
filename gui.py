@@ -365,10 +365,13 @@ class SettingsDialog:
                       font=('Segoe UI', 11)).pack(anchor='w', pady=3)
 
         # === SECCION: OLLAMA AVANZADO ===
-        self._section(main, "OLLAMA AVANZADO", bg, fg_dim, border)
+        self.ollama_advanced_section = tk.Frame(main, bg=bg)
+        self.ollama_advanced_section.pack(fill=tk.X)
+
+        self._section(self.ollama_advanced_section, "OLLAMA AVANZADO", bg, fg_dim, border)
 
         # Context
-        row = tk.Frame(main, bg=bg)
+        row = tk.Frame(self.ollama_advanced_section, bg=bg)
         row.pack(fill=tk.X, pady=5)
         tk.Label(row, text="Context Window:", width=18, anchor='w',
                 bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
@@ -378,7 +381,7 @@ class SettingsDialog:
         ctx_combo.pack(side=tk.LEFT)
 
         # Temperature Ollama
-        row = tk.Frame(main, bg=bg)
+        row = tk.Frame(self.ollama_advanced_section, bg=bg)
         row.pack(fill=tk.X, pady=5)
         tk.Label(row, text="Temperature:", width=18, anchor='w',
                 bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
@@ -389,10 +392,13 @@ class SettingsDialog:
         self.ollama_temp_slider.pack(side=tk.LEFT)
 
         # === SECCION: CLAUDE AVANZADO ===
-        self._section(main, "CLAUDE AVANZADO", bg, fg_dim, border)
+        self.claude_advanced_section = tk.Frame(main, bg=bg)
+        self.claude_advanced_section.pack(fill=tk.X)
+
+        self._section(self.claude_advanced_section, "CLAUDE AVANZADO", bg, fg_dim, border)
 
         # Max Tokens
-        row = tk.Frame(main, bg=bg)
+        row = tk.Frame(self.claude_advanced_section, bg=bg)
         row.pack(fill=tk.X, pady=5)
         tk.Label(row, text="Max Tokens:", width=18, anchor='w',
                 bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
@@ -402,7 +408,7 @@ class SettingsDialog:
         tokens_combo.pack(side=tk.LEFT)
 
         # Temperature Claude
-        row = tk.Frame(main, bg=bg)
+        row = tk.Frame(self.claude_advanced_section, bg=bg)
         row.pack(fill=tk.X, pady=5)
         tk.Label(row, text="Temperature:", width=18, anchor='w',
                 bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
@@ -445,13 +451,21 @@ class SettingsDialog:
         """Muestra/oculta controles según el proveedor seleccionado"""
         provider = self.provider_var.get()
         if provider == "ollama":
+            # Mostrar controles de Ollama
             self.ollama_row.pack(fill=tk.X, pady=5)
+            self.ollama_advanced_section.pack(fill=tk.X)
+            # Ocultar controles de Claude
             self.claude_row.pack_forget()
             self.api_key_row.pack_forget()
+            self.claude_advanced_section.pack_forget()
         else:  # claude
+            # Ocultar controles de Ollama
             self.ollama_row.pack_forget()
+            self.ollama_advanced_section.pack_forget()
+            # Mostrar controles de Claude
             self.claude_row.pack(fill=tk.X, pady=5)
             self.api_key_row.pack(fill=tk.X, pady=5)
+            self.claude_advanced_section.pack(fill=tk.X)
 
     def _browse_output(self):
         path = filedialog.askdirectory(title="Seleccionar carpeta de salida")
