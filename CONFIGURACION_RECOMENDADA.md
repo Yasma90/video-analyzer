@@ -137,8 +137,8 @@ Whisper: medium o large
 AI Provider: Claude
 Modelo Claude: claude-sonnet-4-5-20250929
 GPU: ✅ Activado
-Context Window: 16384
-Temperature: 0.2 (más determinístico)
+Claude Max Tokens: 4096
+Claude Temperature: 0.2 (más determinístico)
 Idioma: en (si el video es en inglés)
 ```
 
@@ -160,12 +160,24 @@ Idioma: en (si el video es en inglés)
 - **0.8 - 1.0:** Respuestas más creativas y variadas
   - Ideal para: Contenido artístico, brainstorming
 
-### Context Window
+**Nota:** Temperature se aplica de forma independiente para Ollama y Claude. Configúralo según el proveedor que estés usando.
+
+### Context Window (solo Ollama)
 
 - **4096:** Mínimo, para textos cortos
 - **8192:** Recomendado para videos de hasta 30 min
 - **16384:** Para videos largos (>30 min) o análisis detallado
 - **32768:** Para videos muy largos (>1 hora) - solo si tu modelo lo soporta
+
+**Nota:** Claude usa `Max Tokens` en lugar de Context Window.
+
+### Max Tokens (solo Claude)
+
+- **2048:** Para análisis cortos y rápidos
+- **4096:** Recomendado para uso general (⭐ por defecto)
+- **8192:** Para análisis muy detallados o videos largos
+
+**Nota:** Más tokens = respuestas más largas pero mayor costo
 
 ### Idioma
 
