@@ -1049,9 +1049,8 @@ class VideoAnalyzerGUI:
         self.start_time = time.time()
         self._update_timer()
 
-        # Guardar config actual
+        # Guardar config actual (solo whisper y language, ya que AI provider se guarda en settings)
         self.config['whisper_model'] = self.whisper_var.get()
-        self.config['ollama_model'] = self.ollama_var.get()
         self.config['language'] = self.language_var.get()
         save_config(self.config)
 
