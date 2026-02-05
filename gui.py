@@ -650,7 +650,13 @@ class VideoAnalyzerGUI:
         tk.Button(btn_frame, text="Ajustes", width=6,
                  command=self._open_settings,
                  bg=t['accent'], fg=t['text'], relief=tk.FLAT,
-                 font=('Segoe UI', 8), cursor='hand2').pack(side=tk.LEFT)
+                 font=('Segoe UI', 8), cursor='hand2').pack(side=tk.LEFT, padx=3)
+
+        self.cache_btn = tk.Button(btn_frame, text="Cache", width=6,
+                                   command=self._clear_cache,
+                                   bg=t['accent'], fg=t['text'], relief=tk.FLAT,
+                                   font=('Segoe UI', 8), cursor='hand2')
+        self.cache_btn.pack(side=tk.LEFT)
 
         # === STATUS BAR (abajo - empaquetar PRIMERO) ===
         status = tk.Frame(main, bg=t['bg'])
@@ -1040,7 +1046,11 @@ class VideoAnalyzerGUI:
                 secs = int(self.video_duration % 60)
                 size_mb = path.stat().st_size / (1024 * 1024)
 
-                info = f"Duracion: {mins}:{secs:02d} | Tamano: {size_mb:.1f} MB"
+                # Verificar si existe cache
+                cache_file = path.parent / f"{path.stem}_cache.json"
+                cache_info = " | Cache disponible ✓" if cache_file.exists() else ""
+
+                info = f"Duracion: {mins}:{secs:02d} | Tamano: {size_mb:.1f} MB{cache_info}"
                 self.root.after(0, lambda: self._show_video_info(info))
             except Exception as e:
                 self.root.after(0, lambda: self._show_video_info(f"Error: {e}"))
@@ -1056,6 +1066,29 @@ class VideoAnalyzerGUI:
         t = self.theme
         self.video_info.config(text=text)
         self.video_info.pack(fill=tk.X, pady=(5, 0))
+
+    def _clear_cache(self):
+        """Limpia archivos de cache de transcripción"""
+        if not self.video_path:
+            messagebox.showinfo("Info", "Selecciona un video primero para limpiar su cache.")
+            return
+
+        cache_file = self.video_path.parent / f"{self.video_path.stem}_cache.json"
+
+        if cache_file.exists():
+            try:
+                cache_file.unlink()
+                messagebox.showinfo("Cache Limpiado",
+                    f"Cache eliminado:\n{cache_file.name}\n\n"
+                    "El próximo análisis volverá a transcribir desde cero.")
+                self._append_result(f"\nCache eliminado: {cache_file.name}")
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo eliminar el cache:\n{e}")
+        else:
+            messagebox.showinfo("Cache",
+                f"No hay cache para este video.\n\n"
+                f"El cache se crea automáticamente después de la transcripción\n"
+                f"para poder reanudar en caso de errores.")
 
     def _reset_progress(self):
         """Reinicia indicadores de progreso"""
@@ -1173,45 +1206,83 @@ class VideoAnalyzerGUI:
             else:
                 self._append_result(f"IA: Claude ({cfg.get('claude_model', 'sonnet')})\n")
 
-            # === PASO 1: Audio ===
-            self._update_step(0, "running")
-            self._update_progress_text("Extrayendo audio del video...")
+            # Verificar si existe cache de transcripción
+            cache_file = self.video_path.parent / f"{self.video_path.stem}_cache.json"
+            transcription = None
+            segments = None
+            duration = None
 
-            # Usar el nombre del video para el archivo de audio
-            audio_filename = f"{self.video_path.stem}_audio.mp3" if not cfg['delete_temp_audio'] else "temp_audio.mp3"
-            audio_path = self.video_path.parent / audio_filename
-            video = VideoFileClip(str(self.video_path))
-            duration = video.duration
-            video.audio.write_audiofile(str(audio_path))
-            video.close()
+            if cache_file.exists():
+                try:
+                    self._append_result(f"\nCache encontrado! Recuperando transcripcion previa...")
+                    with open(cache_file, 'r', encoding='utf-8') as f:
+                        cache_data = json.load(f)
+                        transcription = cache_data.get('transcription')
+                        segments = cache_data.get('segments')
+                        duration = cache_data.get('duration')
 
-            self._update_step(0, "completed", f"{duration/60:.1f} min")
-            self._append_result(f"Audio extraido ({duration/60:.1f} min)")
+                    self._update_step(0, "completed", f"{duration/60:.1f} min")
+                    self._update_step(1, "completed", f"{len(transcription)} chars")
+                    self._append_result(f"Transcripcion recuperada del cache ({len(transcription)} caracteres)\n")
+                except Exception as e:
+                    self._append_result(f"Error al leer cache: {e}")
+                    transcription = None
 
-            if not self.is_processing: return
+            if transcription is None:
+                # === PASO 1: Audio ===
+                self._update_step(0, "running")
+                self._update_progress_text("Extrayendo audio del video...")
 
-            # === PASO 2: Transcribir ===
-            self._update_step(1, "running")
-            self._update_progress_text("Transcribiendo con Whisper...")
-            self._append_result(f"\n[PASO 2/6] Cargando modelo Whisper '{cfg['whisper_model']}'...")
+                # Usar el nombre del video para el archivo de audio
+                audio_filename = f"{self.video_path.stem}_audio.mp3" if not cfg['delete_temp_audio'] else "temp_audio.mp3"
+                audio_path = self.video_path.parent / audio_filename
+                video = VideoFileClip(str(self.video_path))
+                duration = video.duration
+                video.audio.write_audiofile(str(audio_path))
+                video.close()
 
-            model = whisper.load_model(cfg['whisper_model'], device=device)
-            self._append_result(f"Modelo cargado. Iniciando transcripcion...")
-            result = model.transcribe(str(audio_path), language=cfg['language'],
-                                      fp16=(device == "cuda"))
+                self._update_step(0, "completed", f"{duration/60:.1f} min")
+                self._append_result(f"Audio extraido ({duration/60:.1f} min)")
 
-            transcription = result["text"]
-            segments = result["segments"]
+                if not self.is_processing: return
 
-            # Limpiar
-            if cfg['delete_temp_audio']:
-                audio_path.unlink(missing_ok=True)
-            if device == "cuda":
-                torch.cuda.empty_cache()
-            del model
+                # === PASO 2: Transcribir ===
+                self._update_step(1, "running")
+                self._update_progress_text("Transcribiendo con Whisper...")
+                self._append_result(f"\n[PASO 2/6] Cargando modelo Whisper '{cfg['whisper_model']}'...")
 
-            self._update_step(1, "completed", f"{len(transcription)} chars")
-            self._append_result(f"Transcripcion: {len(transcription)} caracteres")
+                model = whisper.load_model(cfg['whisper_model'], device=device)
+                self._append_result(f"Modelo cargado. Iniciando transcripcion...")
+                result = model.transcribe(str(audio_path), language=cfg['language'],
+                                          fp16=(device == "cuda"))
+
+                transcription = result["text"]
+                segments = result["segments"]
+
+                # Guardar cache de transcripción
+                try:
+                    cache_data = {
+                        'transcription': transcription,
+                        'segments': segments,
+                        'duration': duration,
+                        'video_name': self.video_path.name,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    with open(cache_file, 'w', encoding='utf-8') as f:
+                        json.dump(cache_data, f, ensure_ascii=False, indent=2)
+                    self._append_result(f"Cache guardado: {cache_file.name}")
+                except Exception as e:
+                    self._append_result(f"Advertencia: No se pudo guardar cache: {e}")
+
+                # Limpiar
+                if cfg['delete_temp_audio']:
+                    audio_path.unlink(missing_ok=True)
+                if device == "cuda":
+                    torch.cuda.empty_cache()
+                del model
+
+                self._update_step(1, "completed", f"{len(transcription)} chars")
+                self._append_result(f"Transcripcion: {len(transcription)} caracteres")
 
             if not self.is_processing: return
 
