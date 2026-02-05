@@ -1,7 +1,16 @@
-# Video Analyzer v2.0
+# Video Analyzer v2.1
 
-Aplicacion local para **transcribir y analizar videos** usando IA (Whisper + Ollama).
-100% local, sin enviar datos a la nube.
+Aplicacion para **transcribir y analizar videos** usando IA (Whisper + Ollama/Claude).
+Soporta procesamiento 100% local con Ollama o en la nube con Claude AI.
+
+## Novedades v2.1
+
+- **🤖 Soporte para Claude AI** - Usa modelos Claude (Sonnet 4.5, Opus 4.5, 3.5 Sonnet, 3.5 Haiku)
+- **🔄 Selector de proveedor IA** - Cambia entre Ollama (local) y Claude (API) segun necesites
+- **🔐 API Key segura** - Input con asteriscos para API key de Claude
+- **📁 Drag & Drop** - Arrastra videos directamente a la aplicacion
+- **🎵 Naming de audio mejorado** - Archivos de audio conservan el nombre del video
+- **🐛 Fixes** - Corregido error de scroll en dialogo de configuracion
 
 ## Novedades v2.0
 
@@ -17,8 +26,10 @@ Aplicacion local para **transcribir y analizar videos** usando IA (Whisper + Oll
 ## Caracteristicas
 
 - **Transcripcion automatica** con OpenAI Whisper (local)
-- **Analisis con IA** usando Ollama (LLaMA, Mistral, etc.)
+- **Analisis con IA** usando Ollama (local) o Claude AI (API)
+- **Modelos Claude**: Sonnet 4.5, Opus 4.5, 3.5 Sonnet, 3.5 Haiku
 - **Aceleracion GPU** con CUDA (NVIDIA)
+- **Drag & Drop** para cargar videos facilmente
 - **Interfaz grafica** intuitiva con progreso por pasos
 - **Soporte multi-idioma**: Español, Ingles, Portugues, Frances, Aleman, Italiano
 - **Reportes en Markdown/TXT/JSON** con resumen, puntos clave y transcripcion
@@ -28,7 +39,8 @@ Aplicacion local para **transcribir y analizar videos** usando IA (Whisper + Oll
 
 - **Python 3.10+**
 - **NVIDIA GPU** (recomendado, 4GB+ VRAM) o CPU
-- **Ollama** instalado con modelo descargado
+- **Ollama** instalado con modelo descargado (para IA local)
+- **O API Key de Claude** (para usar Claude AI)
 - **FFmpeg** (incluido en el proyecto)
 
 ## Instalacion
@@ -46,7 +58,7 @@ cd video-analyzer
 ```bash
 python -m venv venv
 venv\Scripts\activate
-pip install openai-whisper moviepy ollama torch --index-url https://pypi.org/simple/
+pip install -r requirements.txt
 ```
 
 ### 3. Para GPU NVIDIA (recomendado)
@@ -55,7 +67,9 @@ pip install openai-whisper moviepy ollama torch --index-url https://pypi.org/sim
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 --upgrade
 ```
 
-### 4. Instalar Ollama y descargar modelo
+### 4. Configurar proveedor de IA
+
+#### Opcion A: Ollama (Local - Gratis)
 
 ```bash
 # Instalar Ollama desde https://ollama.com
@@ -64,6 +78,13 @@ ollama pull llama2
 # o para mejor calidad:
 ollama pull llama3.1:8b
 ```
+
+#### Opcion B: Claude AI (API - Requiere cuenta)
+
+1. Crear cuenta en [console.anthropic.com](https://console.anthropic.com)
+2. Generar API key
+3. En la app: **Ajustes** → **Configuracion Avanzada** → Seleccionar "claude" como proveedor
+4. Pegar tu API key
 
 ## Uso
 
@@ -128,7 +149,12 @@ python analyzer.py "video.mp4" es
 
 Accesible desde el boton **[Ajustes]**:
 
-- **Modelos**: Whisper (tiny/base/small/medium/large), Ollama (detecta instalados)
+- **Modelos**:
+  - Whisper: tiny/base/small/medium/large
+  - Proveedor IA: Ollama o Claude
+  - Modelo Ollama: detecta modelos instalados automaticamente
+  - Modelo Claude: Sonnet 4.5, Opus 4.5, 3.5 Sonnet, 3.5 Haiku
+  - API Key Claude: input seguro con asteriscos
 - **Salida**: Carpeta destino, formato (md/txt/json)
 - **Procesamiento**: GPU on/off, eliminar audio temporal
 - **Ollama Avanzado**: Context window (4096-32768), Temperature (0-1)
@@ -241,25 +267,39 @@ Mismo contenido que Markdown pero sin formato.
 ## Solucion de Problemas
 
 ### "CUDA not available"
+
 - Verifica que tienes GPU NVIDIA
 - Reinstala PyTorch con CUDA: `pip install torch --index-url https://download.pytorch.org/whl/cu121`
 
 ### "FFmpeg not found"
+
 - FFmpeg debe estar en la carpeta del proyecto
 - O instalalo globalmente: `winget install ffmpeg`
 
 ### "Ollama connection refused"
+
 - Asegurate que Ollama este corriendo: `ollama serve`
 
+### "API Key de Claude no configurada"
+
+- Ve a **Ajustes** → **Configuracion Avanzada**
+- Selecciona "claude" como proveedor
+- Pega tu API key de Anthropic
+
 ### Transcripcion lenta
+
 - Usa modelo `small` o `base` en lugar de `medium`
 - Verifica que GPU este activa (ver status bar en GUI)
 
 ### Analisis sale en ingles
-- Actualiza a v2.0 que incluye prompts mejorados para español
 
-### Botones no visibles en Ajustes
-- Actualiza a v2.0 con dialogo de configuracion corregido
+- v2.1 incluye prompts optimizados para español
+- Funciona tanto con Ollama como con Claude
+
+### Drag & Drop no funciona
+
+- Instala `tkinterdnd2`: `pip install tkinterdnd2`
+- O usa click para seleccionar archivos
 
 ## Licencia
 
