@@ -263,10 +263,44 @@ class SettingsDialog:
         tk.Label(row, text="Modelo Whisper:", width=18, anchor='w',
                 bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
         self.whisper_var = tk.StringVar(value=self.config['whisper_model'])
+
+        # Detectar modelo recomendado segun VRAM
+        try:
+            import torch
+            if torch.cuda.is_available():
+                gpu_mem = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+                if gpu_mem >= 10:
+                    recommended = "large"
+                elif gpu_mem >= 5:
+                    recommended = "medium"
+                elif gpu_mem >= 2:
+                    recommended = "small"
+                else:
+                    recommended = "base"
+            else:
+                recommended = "tiny"
+        except:
+            recommended = "small"
+
         whisper_combo = ttk.Combobox(row, textvariable=self.whisper_var,
                                       values=["tiny", "base", "small", "medium", "large"],
                                       width=18, state='readonly')
-        whisper_combo.pack(side=tk.LEFT)
+        whisper_combo.pack(side=tk.LEFT, padx=(0, 5))
+
+        # Label de recomendacion (solo si no esta seleccionado el recomendado)
+        self.whisper_rec_label = tk.Label(row, text=f"({recommended} recomendado)",
+                                          bg=bg, fg='#00d4aa', font=('Segoe UI', 9, 'italic'))
+        self.whisper_recommended = recommended
+        if self.config['whisper_model'] != recommended:
+            self.whisper_rec_label.pack(side=tk.LEFT)
+
+        # Callback para actualizar label cuando cambia seleccion
+        def on_whisper_change(event=None):
+            if self.whisper_var.get() == self.whisper_recommended:
+                self.whisper_rec_label.pack_forget()
+            else:
+                self.whisper_rec_label.pack(side=tk.LEFT)
+        whisper_combo.bind('<<ComboboxSelected>>', on_whisper_change)
 
         # AI Provider
         row = tk.Frame(main, bg=bg)
