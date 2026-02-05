@@ -51,7 +51,8 @@ DEFAULT_CONFIG = {
     "delete_temp_audio": True,
     "ollama_ctx": 8192,
     "ollama_temp": 0.7,
-    "claude_max_tokens": 4096
+    "claude_max_tokens": 4096,
+    "claude_temp": 0.5
 }
 
 THEMES = {
@@ -376,16 +377,40 @@ class SettingsDialog:
                                   values=["4096", "8192", "16384", "32768"], width=18)
         ctx_combo.pack(side=tk.LEFT)
 
-        # Temperature
+        # Temperature Ollama
         row = tk.Frame(main, bg=bg)
         row.pack(fill=tk.X, pady=5)
         tk.Label(row, text="Temperature:", width=18, anchor='w',
                 bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
-        self.temp_slider = tk.Scale(row, from_=0, to=1, resolution=0.1, orient=tk.HORIZONTAL,
+        self.ollama_temp_slider = tk.Scale(row, from_=0, to=1, resolution=0.1, orient=tk.HORIZONTAL,
                                     length=180, bg=bg, fg=fg, highlightthickness=0,
                                     troughcolor='#4a4a4a', activebackground='#e94560')
-        self.temp_slider.set(self.config['ollama_temp'])
-        self.temp_slider.pack(side=tk.LEFT)
+        self.ollama_temp_slider.set(self.config['ollama_temp'])
+        self.ollama_temp_slider.pack(side=tk.LEFT)
+
+        # === SECCION: CLAUDE AVANZADO ===
+        self._section(main, "CLAUDE AVANZADO", bg, fg_dim, border)
+
+        # Max Tokens
+        row = tk.Frame(main, bg=bg)
+        row.pack(fill=tk.X, pady=5)
+        tk.Label(row, text="Max Tokens:", width=18, anchor='w',
+                bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
+        self.max_tokens_var = tk.StringVar(value=str(self.config.get('claude_max_tokens', 4096)))
+        tokens_combo = ttk.Combobox(row, textvariable=self.max_tokens_var,
+                                    values=["2048", "4096", "8192"], width=18)
+        tokens_combo.pack(side=tk.LEFT)
+
+        # Temperature Claude
+        row = tk.Frame(main, bg=bg)
+        row.pack(fill=tk.X, pady=5)
+        tk.Label(row, text="Temperature:", width=18, anchor='w',
+                bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
+        self.claude_temp_slider = tk.Scale(row, from_=0, to=1, resolution=0.1, orient=tk.HORIZONTAL,
+                                    length=180, bg=bg, fg=fg, highlightthickness=0,
+                                    troughcolor='#4a4a4a', activebackground='#e94560')
+        self.claude_temp_slider.set(self.config.get('claude_temp', 0.5))
+        self.claude_temp_slider.pack(side=tk.LEFT)
 
         # === BOTONES ===
         btn_frame = tk.Frame(main, bg=bg)
@@ -445,7 +470,9 @@ class SettingsDialog:
             'use_gpu': self.gpu_var.get(),
             'delete_temp_audio': self.temp_var.get(),
             'ollama_ctx': int(self.ctx_var.get()),
-            'ollama_temp': self.temp_slider.get()
+            'ollama_temp': self.ollama_temp_slider.get(),
+            'claude_max_tokens': int(self.max_tokens_var.get()),
+            'claude_temp': self.claude_temp_slider.get()
         }
         self._cleanup_and_close()
 
@@ -1317,6 +1344,7 @@ A quien va dirigido este contenido.""",
         message = client.messages.create(
             model=cfg.get('claude_model', 'claude-sonnet-4-5-20250929'),
             max_tokens=cfg.get('claude_max_tokens', 4096),
+            temperature=cfg.get('claude_temp', 0.5),
             messages=[{
                 "role": "user",
                 "content": f"{instruction}\n\nTEXTO:\n{text}"
