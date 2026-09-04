@@ -1,16 +1,17 @@
-# Video Analyzer v2.1
+# Video Analyzer v1.0.0
 
-Aplicacion para **transcribir y analizar videos** usando IA (Whisper + Ollama/Claude).
-Soporta procesamiento 100% local con Ollama o en la nube con Claude AI.
+Aplicación para **transcribir y analizar videos** usando IA (Whisper + Ollama/Claude).
+Soporta procesamiento 100% local con Ollama o en la nube con Claude AI (Anthropic).
 
-## Novedades v2.1
+## Novedades v1.0.0
 
-- **🤖 Soporte para Claude AI** - Usa modelos Claude (Sonnet 4.5, Opus 4.5, 3.5 Sonnet, 3.5 Haiku)
-- **🔄 Selector de proveedor IA** - Cambia entre Ollama (local) y Claude (API) segun necesites
-- **🔐 API Key segura** - Input con asteriscos para API key de Claude
-- **📁 Drag & Drop** - Arrastra videos directamente a la aplicacion
-- **🎵 Naming de audio mejorado** - Archivos de audio conservan el nombre del video
-- **🐛 Fixes** - Corregido error de scroll en dialogo de configuracion
+- **🤖 Soporte para Claude AI** - Modelos Claude (Sonnet 4.5, Opus 4.5, 3.5 Sonnet, 3.5 Haiku)
+- **🔄 Selector de proveedor IA** - Alterna entre Ollama (local) y Claude (API)
+- **🔐 Seguridad de credenciales** - API Key obtenida mediante la UI (en memoria de sesión) o vía `ANTHROPIC_API_KEY`, sin persistencia en texto plano en disco
+- **📁 Drag & Drop** - Arrastra videos directamente a la interfaz
+- **⚡ Sistema de caché** - Caché de transcripción para reanudar o reanalizar rápidamente
+- **📄 Visor de reportes** - Previsualizador integrado con soporte Markdown
+- **📜 Changelog & Licencia** - Registro de cambios formal ([CHANGELOG.md](CHANGELOG.md)) y licencia MIT oficial ([LICENSE](LICENSE))
 
 ## Novedades v2.0
 
@@ -303,8 +304,10 @@ Mismo contenido que Markdown pero sin formato.
 - O usa click para seleccionar archivos
 
 ## Licencia
+ 
+Este proyecto está bajo la Licencia MIT. Consulta el archivo [LICENSE](LICENSE) para más detalles.
 
-MIT License - Uso libre
+Copyright (c) 2024-2026 Yasmany Reyes Gonzalez.
 
 ## Creditos
 
