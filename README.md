@@ -158,6 +158,7 @@ Accesible desde el boton **[Ajustes]**:
 - **Salida**: Carpeta destino, formato (md/txt/json)
 - **Procesamiento**: GPU on/off, eliminar audio temporal
 - **Ollama Avanzado**: Context window (4096-32768), Temperature (0-1)
+- **Claude Avanzado**: Max tokens (2048-8192), Temperature (0-1)
 
 ### Previsualizador de Reportes
 

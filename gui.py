@@ -13,10 +13,10 @@ from pathlib import Path
 # DPI Awareness modo 2 - Per Monitor v2
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(2)
-except:
+except (AttributeError, OSError):
     try:
         ctypes.windll.user32.SetProcessDPIAware()
-    except:
+    except (AttributeError, OSError):
         pass
 
 # Add FFmpeg to PATH
@@ -51,7 +51,8 @@ DEFAULT_CONFIG = {
     "delete_temp_audio": True,
     "ollama_ctx": 8192,
     "ollama_temp": 0.7,
-    "claude_max_tokens": 4096
+    "claude_max_tokens": 4096,
+    "claude_temp": 0.5
 }
 
 THEMES = {
@@ -107,10 +108,8 @@ def get_recommended_config():
     try:
         import torch
         if torch.cuda.is_available():
-            # Detectar VRAM
             vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
 
-            # Seleccionar modelo Whisper segun VRAM
             if vram_gb >= 10:
                 config['whisper_model'] = 'large'
             elif vram_gb >= 5:
@@ -126,7 +125,7 @@ def get_recommended_config():
         else:
             config['whisper_model'] = 'base'
             config['use_gpu'] = False
-    except:
+    except (ImportError, RuntimeError):
         config['whisper_model'] = 'small'
 
     return config
@@ -140,7 +139,7 @@ def load_config():
                 config = DEFAULT_CONFIG.copy()
                 config.update(saved)
                 return config
-        except:
+        except (json.JSONDecodeError, OSError, KeyError):
             pass
 
     # Primera ejecucion: generar config recomendada
@@ -162,7 +161,7 @@ def get_ollama_models():
         import ollama
         models = ollama.list()
         return [m['name'].split(':')[0] for m in models.get('models', [])]
-    except:
+    except (ImportError, ConnectionError, Exception):
         return ["llama2", "llama3", "mistral", "codellama"]
 
 def format_time(seconds):
@@ -262,10 +261,44 @@ class SettingsDialog:
         tk.Label(row, text="Modelo Whisper:", width=18, anchor='w',
                 bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
         self.whisper_var = tk.StringVar(value=self.config['whisper_model'])
+
+        # Detectar modelo recomendado segun VRAM
+        try:
+            import torch
+            if torch.cuda.is_available():
+                gpu_mem = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+                if gpu_mem >= 10:
+                    recommended = "large"
+                elif gpu_mem >= 5:
+                    recommended = "medium"
+                elif gpu_mem >= 2:
+                    recommended = "small"
+                else:
+                    recommended = "base"
+            else:
+                recommended = "tiny"
+        except (ImportError, RuntimeError):
+            recommended = "small"
+
         whisper_combo = ttk.Combobox(row, textvariable=self.whisper_var,
                                       values=["tiny", "base", "small", "medium", "large"],
                                       width=18, state='readonly')
-        whisper_combo.pack(side=tk.LEFT)
+        whisper_combo.pack(side=tk.LEFT, padx=(0, 5))
+
+        # Label de recomendacion (solo si no esta seleccionado el recomendado)
+        self.whisper_rec_label = tk.Label(row, text=f"({recommended} recomendado)",
+                                          bg=bg, fg='#00d4aa', font=('Segoe UI', 9, 'italic'))
+        self.whisper_recommended = recommended
+        if self.config['whisper_model'] != recommended:
+            self.whisper_rec_label.pack(side=tk.LEFT)
+
+        # Callback para actualizar label cuando cambia seleccion
+        def on_whisper_change(event=None):
+            if self.whisper_var.get() == self.whisper_recommended:
+                self.whisper_rec_label.pack_forget()
+            else:
+                self.whisper_rec_label.pack(side=tk.LEFT)
+        whisper_combo.bind('<<ComboboxSelected>>', on_whisper_change)
 
         # AI Provider
         row = tk.Frame(main, bg=bg)
@@ -317,9 +350,6 @@ class SettingsDialog:
                 bg=input_bg, fg=fg, insertbackground=fg, show='*',
                 relief=tk.SOLID, bd=1).pack(side=tk.LEFT)
 
-        # Actualizar visibilidad inicial
-        self._on_provider_change()
-
         # === SECCION: SALIDA ===
         self._section(main, "SALIDA", bg, fg_dim, border)
 
@@ -364,10 +394,13 @@ class SettingsDialog:
                       font=('Segoe UI', 11)).pack(anchor='w', pady=3)
 
         # === SECCION: OLLAMA AVANZADO ===
-        self._section(main, "OLLAMA AVANZADO", bg, fg_dim, border)
+        self.ollama_advanced_section = tk.Frame(main, bg=bg)
+        self.ollama_advanced_section.pack(fill=tk.X)
+
+        self._section(self.ollama_advanced_section, "OLLAMA AVANZADO", bg, fg_dim, border)
 
         # Context
-        row = tk.Frame(main, bg=bg)
+        row = tk.Frame(self.ollama_advanced_section, bg=bg)
         row.pack(fill=tk.X, pady=5)
         tk.Label(row, text="Context Window:", width=18, anchor='w',
                 bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
@@ -376,20 +409,47 @@ class SettingsDialog:
                                   values=["4096", "8192", "16384", "32768"], width=18)
         ctx_combo.pack(side=tk.LEFT)
 
-        # Temperature
-        row = tk.Frame(main, bg=bg)
+        # Temperature Ollama
+        row = tk.Frame(self.ollama_advanced_section, bg=bg)
         row.pack(fill=tk.X, pady=5)
         tk.Label(row, text="Temperature:", width=18, anchor='w',
                 bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
-        self.temp_slider = tk.Scale(row, from_=0, to=1, resolution=0.1, orient=tk.HORIZONTAL,
+        self.ollama_temp_slider = tk.Scale(row, from_=0, to=1, resolution=0.1, orient=tk.HORIZONTAL,
                                     length=180, bg=bg, fg=fg, highlightthickness=0,
                                     troughcolor='#4a4a4a', activebackground='#e94560')
-        self.temp_slider.set(self.config['ollama_temp'])
-        self.temp_slider.pack(side=tk.LEFT)
+        self.ollama_temp_slider.set(self.config['ollama_temp'])
+        self.ollama_temp_slider.pack(side=tk.LEFT)
+
+        # === SECCION: CLAUDE AVANZADO ===
+        self.claude_advanced_section = tk.Frame(main, bg=bg)
+        self.claude_advanced_section.pack(fill=tk.X)
+
+        self._section(self.claude_advanced_section, "CLAUDE AVANZADO", bg, fg_dim, border)
+
+        # Max Tokens
+        row = tk.Frame(self.claude_advanced_section, bg=bg)
+        row.pack(fill=tk.X, pady=5)
+        tk.Label(row, text="Max Tokens:", width=18, anchor='w',
+                bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
+        self.max_tokens_var = tk.StringVar(value=str(self.config.get('claude_max_tokens', 4096)))
+        tokens_combo = ttk.Combobox(row, textvariable=self.max_tokens_var,
+                                    values=["2048", "4096", "8192"], width=18)
+        tokens_combo.pack(side=tk.LEFT)
+
+        # Temperature Claude
+        row = tk.Frame(self.claude_advanced_section, bg=bg)
+        row.pack(fill=tk.X, pady=5)
+        tk.Label(row, text="Temperature:", width=18, anchor='w',
+                bg=bg, fg=fg, font=('Segoe UI', 11)).pack(side=tk.LEFT)
+        self.claude_temp_slider = tk.Scale(row, from_=0, to=1, resolution=0.1, orient=tk.HORIZONTAL,
+                                    length=180, bg=bg, fg=fg, highlightthickness=0,
+                                    troughcolor='#4a4a4a', activebackground='#e94560')
+        self.claude_temp_slider.set(self.config.get('claude_temp', 0.5))
+        self.claude_temp_slider.pack(side=tk.LEFT)
 
         # === BOTONES ===
         btn_frame = tk.Frame(main, bg=bg)
-        btn_frame.pack(fill=tk.X, pady=(15, 5))
+        btn_frame.pack(fill=tk.X, pady=(20, 20))
 
         # GUARDAR primero, CANCELAR segundo
         btn_save = tk.Button(btn_frame, text="GUARDAR", command=self._save,
@@ -408,6 +468,13 @@ class SettingsDialog:
                               activebackground='#c82333', activeforeground='white')
         btn_cancel.pack(side=tk.LEFT)
 
+        # Forzar actualizacion del scrollregion para incluir los botones
+        main.update_idletasks()
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+        # Actualizar visibilidad inicial de secciones segun proveedor
+        self._on_provider_change()
+
     def _section(self, parent, title, bg, fg_dim, border):
         """Crea encabezado de seccion"""
         frame = tk.Frame(parent, bg=bg)
@@ -420,13 +487,25 @@ class SettingsDialog:
         """Muestra/oculta controles según el proveedor seleccionado"""
         provider = self.provider_var.get()
         if provider == "ollama":
+            # Mostrar controles de Ollama
             self.ollama_row.pack(fill=tk.X, pady=5)
+            self.ollama_advanced_section.pack(fill=tk.X)
+            # Ocultar controles de Claude
             self.claude_row.pack_forget()
             self.api_key_row.pack_forget()
+            self.claude_advanced_section.pack_forget()
         else:  # claude
+            # Ocultar controles de Ollama
             self.ollama_row.pack_forget()
+            self.ollama_advanced_section.pack_forget()
+            # Mostrar controles de Claude
             self.claude_row.pack(fill=tk.X, pady=5)
             self.api_key_row.pack(fill=tk.X, pady=5)
+            self.claude_advanced_section.pack(fill=tk.X)
+
+        # Actualizar scrollregion despues de cambiar visibilidad
+        self.main_frame.update_idletasks()
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     def _browse_output(self):
         path = filedialog.askdirectory(title="Seleccionar carpeta de salida")
@@ -445,7 +524,9 @@ class SettingsDialog:
             'use_gpu': self.gpu_var.get(),
             'delete_temp_audio': self.temp_var.get(),
             'ollama_ctx': int(self.ctx_var.get()),
-            'ollama_temp': self.temp_slider.get()
+            'ollama_temp': self.ollama_temp_slider.get(),
+            'claude_max_tokens': int(self.max_tokens_var.get()),
+            'claude_temp': self.claude_temp_slider.get()
         }
         self._cleanup_and_close()
 
@@ -477,7 +558,7 @@ class VideoAnalyzerGUI:
         try:
             dpi = self.root.winfo_fpixels('1i')
             scale = dpi / 96.0
-        except:
+        except tk.TclError:
             scale = 1.0
 
         # Tamaño más conservador
@@ -567,7 +648,13 @@ class VideoAnalyzerGUI:
         tk.Button(btn_frame, text="Ajustes", width=6,
                  command=self._open_settings,
                  bg=t['accent'], fg=t['text'], relief=tk.FLAT,
-                 font=('Segoe UI', 8), cursor='hand2').pack(side=tk.LEFT)
+                 font=('Segoe UI', 8), cursor='hand2').pack(side=tk.LEFT, padx=3)
+
+        self.cache_btn = tk.Button(btn_frame, text="Cache", width=6,
+                                   command=self._clear_cache,
+                                   bg=t['accent'], fg=t['text'], relief=tk.FLAT,
+                                   font=('Segoe UI', 8), cursor='hand2')
+        self.cache_btn.pack(side=tk.LEFT)
 
         # === STATUS BAR (abajo - empaquetar PRIMERO) ===
         status = tk.Frame(main, bg=t['bg'])
@@ -724,11 +811,13 @@ class VideoAnalyzerGUI:
         else:
             model_name = self.config.get('claude_model', 'claude')[:20]
 
-        tk.Label(row, text=f"IA: {provider.title()}", bg=t['card'], fg=t['text'],
-                font=('Segoe UI', 10), width=16, anchor='w').pack(side=tk.LEFT)
+        self.ai_provider_display = tk.Label(row, text=f"IA: {provider.title()}",
+                                           bg=t['card'], fg=t['text'],
+                                           font=('Segoe UI', 10), width=16, anchor='w')
+        self.ai_provider_display.pack(side=tk.LEFT)
         self.ai_model_display = tk.Label(row, text=model_name,
-                                         bg=t['card'], fg=t['text_dim'],
-                                         font=('Segoe UI', 9))
+                                         bg=t['card'], fg=t['text'],
+                                         font=('Segoe UI', 9, 'bold'))
         self.ai_model_display.pack(side=tk.LEFT)
 
         # Carpeta salida
@@ -889,12 +978,14 @@ class VideoAnalyzerGUI:
             # Actualizar UI
             self.whisper_var.set(self.config['whisper_model'])
 
-            # Actualizar display del modelo de IA
+            # Actualizar display del proveedor y modelo de IA
             provider = self.config.get('ai_provider', 'ollama')
             if provider == 'ollama':
                 model_name = self.config['ollama_model']
             else:
                 model_name = self.config.get('claude_model', 'claude')[:20]
+
+            self.ai_provider_display.config(text=f"IA: {provider.title()}")
             self.ai_model_display.config(text=model_name)
 
             if self.config['output_dir']:
@@ -913,7 +1004,7 @@ class VideoAnalyzerGUI:
                 else:
                     text = "GPU: No disponible (usando CPU)"
                     color = self.theme['warning']
-            except:
+            except (ImportError, RuntimeError):
                 text = "GPU: Error al verificar"
                 color = self.theme['error']
 
@@ -953,7 +1044,11 @@ class VideoAnalyzerGUI:
                 secs = int(self.video_duration % 60)
                 size_mb = path.stat().st_size / (1024 * 1024)
 
-                info = f"Duracion: {mins}:{secs:02d} | Tamano: {size_mb:.1f} MB"
+                # Verificar si existe cache
+                cache_file = path.parent / f"{path.stem}_cache.json"
+                cache_info = " | Cache disponible ✓" if cache_file.exists() else ""
+
+                info = f"Duracion: {mins}:{secs:02d} | Tamano: {size_mb:.1f} MB{cache_info}"
                 self.root.after(0, lambda: self._show_video_info(info))
             except Exception as e:
                 self.root.after(0, lambda: self._show_video_info(f"Error: {e}"))
@@ -969,6 +1064,29 @@ class VideoAnalyzerGUI:
         t = self.theme
         self.video_info.config(text=text)
         self.video_info.pack(fill=tk.X, pady=(5, 0))
+
+    def _clear_cache(self):
+        """Limpia archivos de cache de transcripción"""
+        if not self.video_path:
+            messagebox.showinfo("Info", "Selecciona un video primero para limpiar su cache.")
+            return
+
+        cache_file = self.video_path.parent / f"{self.video_path.stem}_cache.json"
+
+        if cache_file.exists():
+            try:
+                cache_file.unlink()
+                messagebox.showinfo("Cache Limpiado",
+                    f"Cache eliminado:\n{cache_file.name}\n\n"
+                    "El próximo análisis volverá a transcribir desde cero.")
+                self._append_result(f"\nCache eliminado: {cache_file.name}")
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo eliminar el cache:\n{e}")
+        else:
+            messagebox.showinfo("Cache",
+                f"No hay cache para este video.\n\n"
+                f"El cache se crea automáticamente después de la transcripción\n"
+                f"para poder reanudar en caso de errores.")
 
     def _reset_progress(self):
         """Reinicia indicadores de progreso"""
@@ -1049,9 +1167,8 @@ class VideoAnalyzerGUI:
         self.start_time = time.time()
         self._update_timer()
 
-        # Guardar config actual
+        # Guardar config actual (solo whisper y language, ya que AI provider se guarda en settings)
         self.config['whisper_model'] = self.whisper_var.get()
-        self.config['ollama_model'] = self.ollama_var.get()
         self.config['language'] = self.language_var.get()
         save_config(self.config)
 
@@ -1070,7 +1187,6 @@ class VideoAnalyzerGUI:
             import torch
             import whisper
             from moviepy import VideoFileClip
-            import ollama
 
             cfg = self.config
             device = "cuda" if (cfg['use_gpu'] and torch.cuda.is_available()) else "cpu"
@@ -1087,49 +1203,90 @@ class VideoAnalyzerGUI:
             else:
                 self._append_result(f"IA: Claude ({cfg.get('claude_model', 'sonnet')})\n")
 
-            # === PASO 1: Audio ===
-            self._update_step(0, "running")
-            self._update_progress_text("Extrayendo audio del video...")
+            # Verificar si existe cache de transcripción
+            cache_file = self.video_path.parent / f"{self.video_path.stem}_cache.json"
+            transcription = None
+            segments = None
+            duration = None
 
-            # Usar el nombre del video para el archivo de audio
-            audio_filename = f"{self.video_path.stem}_audio.mp3" if not cfg['delete_temp_audio'] else "temp_audio.mp3"
-            audio_path = self.video_path.parent / audio_filename
-            video = VideoFileClip(str(self.video_path))
-            duration = video.duration
-            video.audio.write_audiofile(str(audio_path))
-            video.close()
+            if cache_file.exists():
+                try:
+                    self._append_result(f"\nCache encontrado! Recuperando transcripcion previa...")
+                    with open(cache_file, 'r', encoding='utf-8') as f:
+                        cache_data = json.load(f)
+                        transcription = cache_data.get('transcription')
+                        segments = cache_data.get('segments')
+                        duration = cache_data.get('duration')
 
-            self._update_step(0, "completed", f"{duration/60:.1f} min")
-            self._append_result(f"Audio extraido ({duration/60:.1f} min)")
+                    self._update_step(0, "completed", f"{duration/60:.1f} min")
+                    self._update_step(1, "completed", f"{len(transcription)} chars")
+                    self._append_result(f"Transcripcion recuperada del cache ({len(transcription)} caracteres)\n")
+                except Exception as e:
+                    self._append_result(f"Error al leer cache: {e}")
+                    transcription = None
 
-            if not self.is_processing: return
+            if transcription is None:
+                # === PASO 1: Audio ===
+                self._update_step(0, "running")
+                self._update_progress_text("Extrayendo audio del video...")
 
-            # === PASO 2: Transcribir ===
-            self._update_step(1, "running")
-            self._update_progress_text("Transcribiendo con Whisper...")
+                # Usar el nombre del video para el archivo de audio
+                audio_filename = f"{self.video_path.stem}_audio.mp3" if not cfg['delete_temp_audio'] else "temp_audio.mp3"
+                audio_path = self.video_path.parent / audio_filename
+                video = VideoFileClip(str(self.video_path))
+                duration = video.duration
+                video.audio.write_audiofile(str(audio_path))
+                video.close()
 
-            model = whisper.load_model(cfg['whisper_model'], device=device)
-            result = model.transcribe(str(audio_path), language=cfg['language'],
-                                      fp16=(device == "cuda"))
+                self._update_step(0, "completed", f"{duration/60:.1f} min")
+                self._append_result(f"Audio extraido ({duration/60:.1f} min)")
 
-            transcription = result["text"]
-            segments = result["segments"]
+                if not self.is_processing: return
 
-            # Limpiar
-            if cfg['delete_temp_audio']:
-                audio_path.unlink(missing_ok=True)
-            if device == "cuda":
-                torch.cuda.empty_cache()
-            del model
+                # === PASO 2: Transcribir ===
+                self._update_step(1, "running")
+                self._update_progress_text("Transcribiendo con Whisper...")
+                self._append_result(f"\n[PASO 2/6] Cargando modelo Whisper '{cfg['whisper_model']}'...")
 
-            self._update_step(1, "completed", f"{len(transcription)} chars")
-            self._append_result(f"Transcripcion: {len(transcription)} caracteres")
+                model = whisper.load_model(cfg['whisper_model'], device=device)
+                self._append_result(f"Modelo cargado. Iniciando transcripcion...")
+                result = model.transcribe(str(audio_path), language=cfg['language'],
+                                          fp16=(device == "cuda"))
+
+                transcription = result["text"]
+                segments = result["segments"]
+
+                # Guardar cache de transcripción
+                try:
+                    cache_data = {
+                        'transcription': transcription,
+                        'segments': segments,
+                        'duration': duration,
+                        'video_name': self.video_path.name,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    with open(cache_file, 'w', encoding='utf-8') as f:
+                        json.dump(cache_data, f, ensure_ascii=False, indent=2)
+                    self._append_result(f"Cache guardado: {cache_file.name}")
+                except Exception as e:
+                    self._append_result(f"Advertencia: No se pudo guardar cache: {e}")
+
+                # Limpiar
+                if cfg['delete_temp_audio']:
+                    audio_path.unlink(missing_ok=True)
+                if device == "cuda":
+                    torch.cuda.empty_cache()
+                del model
+
+                self._update_step(1, "completed", f"{len(transcription)} chars")
+                self._append_result(f"Transcripcion: {len(transcription)} caracteres")
 
             if not self.is_processing: return
 
             # === PASO 3: Resumen ===
             self._update_step(2, "running")
             self._update_progress_text("Generando resumen con IA...")
+            self._append_result(f"\n[PASO 3/6] Generando resumen ejecutivo con {provider.title()}...")
 
             summary = self._query_ai(
                 """IMPORTANTE: Responde UNICAMENTE en español.
@@ -1147,6 +1304,7 @@ Genera un RESUMEN EJECUTIVO conciso del siguiente contenido.
             # === PASO 4: Puntos clave ===
             self._update_step(3, "running")
             self._update_progress_text("Extrayendo puntos clave...")
+            self._append_result(f"\n[PASO 4/6] Extrayendo puntos clave del contenido...")
 
             key_points = self._query_ai(
                 """IMPORTANTE: Responde UNICAMENTE en español.
@@ -1164,6 +1322,7 @@ Extrae los 8-10 PUNTOS CLAVE mas importantes del contenido.
             # === PASO 5: Analisis ===
             self._update_step(4, "running")
             self._update_progress_text("Generando analisis detallado...")
+            self._append_result(f"\n[PASO 5/6] Generando analisis detallado del video...")
 
             analysis = self._query_ai(
                 """IMPORTANTE: Responde UNICAMENTE en español.
@@ -1193,12 +1352,12 @@ A quien va dirigido este contenido.""",
             # === PASO 6: Guardar ===
             self._update_step(5, "running")
             self._update_progress_text("Guardando reporte...")
+            self._append_result(f"\n[PASO 6/6] Generando reporte final...")
 
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
 
             # Formato del reporte
             if cfg['output_format'] == 'json':
-                import json
                 report_content = json.dumps({
                     "file": self.video_path.name,
                     "date": timestamp,
@@ -1211,12 +1370,13 @@ A quien va dirigido este contenido.""",
                 }, ensure_ascii=False, indent=2)
                 ext = "json"
             else:
+                ai_model_name = cfg.get('claude_model', 'claude')[:30] if provider == 'claude' else cfg['ollama_model']
                 report_content = f"""# ANALISIS DE VIDEO
 
 **Archivo:** {self.video_path.name}
 **Fecha:** {timestamp}
 **Duracion:** {duration/60:.1f} minutos
-**Modelos:** Whisper {cfg['whisper_model']} + {cfg['ollama_model']}
+**Modelos:** Whisper {cfg['whisper_model']} + {ai_model_name}
 
 ---
 
@@ -1278,9 +1438,33 @@ A quien va dirigido este contenido.""",
             self.root.after(0, lambda: self.btn_open.config(state=tk.NORMAL))
 
         except Exception as e:
-            self._append_result(f"\n\nERROR: {str(e)}")
+            import traceback
+            error_details = traceback.format_exc()
+
+            # Mostrar en el panel
+            self._append_result(f"\n\n{'='*50}")
+            self._append_result("ERROR DURANTE EL PROCESAMIENTO")
+            self._append_result(f"{'='*50}")
+            self._append_result(f"\nError: {str(e)}")
+            self._append_result(f"\nVer detalles completos en: error_log.txt")
             self._update_progress_text(f"Error: {str(e)[:40]}...")
 
+            # Guardar log de error
+            try:
+                log_file = self.video_path.parent / "error_log.txt" if self.video_path else Path("error_log.txt")
+                with open(log_file, 'w', encoding='utf-8') as f:
+                    f.write(f"ERROR EN VIDEO ANALYZER - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                    f.write(f"{'='*70}\n\n")
+                    f.write(f"Video: {self.video_path if self.video_path else 'N/A'}\n")
+                    f.write(f"Configuracion:\n")
+                    f.write(f"  - Whisper: {cfg.get('whisper_model', 'N/A')}\n")
+                    f.write(f"  - AI Provider: {cfg.get('ai_provider', 'N/A')}\n")
+                    f.write(f"  - GPU: {cfg.get('use_gpu', 'N/A')}\n\n")
+                    f.write(f"ERROR:\n{error_details}\n")
+            except OSError:
+                pass
+
+            # Marcar paso actual como error
             for i, ind in enumerate(self.step_indicators):
                 if ind.cget('text') == "[>>]":
                     self._update_step(i, "error", str(e)[:20])
@@ -1318,6 +1502,7 @@ A quien va dirigido este contenido.""",
         message = client.messages.create(
             model=cfg.get('claude_model', 'claude-sonnet-4-5-20250929'),
             max_tokens=cfg.get('claude_max_tokens', 4096),
+            temperature=cfg.get('claude_temp', 0.5),
             messages=[{
                 "role": "user",
                 "content": f"{instruction}\n\nTEXTO:\n{text}"
