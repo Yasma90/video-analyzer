@@ -148,10 +148,13 @@ def load_config():
     return config
 
 def save_config(config):
-    """Guarda configuracion a archivo"""
+    """Guarda configuracion a archivo (excluye claves sensibles como API keys)"""
     try:
+        cfg_to_save = config.copy()
+        # Seguridad: nunca persistir API keys sensibles en texto plano en disco
+        cfg_to_save['claude_api_key'] = ""
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump(config, f, indent=2)
+            json.dump(cfg_to_save, f, indent=2)
     except Exception as e:
         print(f"Error saving config: {e}")
 
@@ -349,6 +352,8 @@ class SettingsDialog:
         tk.Entry(self.api_key_row, textvariable=self.api_key_var, width=22,
                 bg=input_bg, fg=fg, insertbackground=fg, show='*',
                 relief=tk.SOLID, bd=1).pack(side=tk.LEFT)
+        tk.Label(self.api_key_row, text="(en memoria / sesión)",
+                bg=bg, fg=fg_dim, font=('Segoe UI', 8, 'italic')).pack(side=tk.LEFT, padx=5)
 
         # === SECCION: SALIDA ===
         self._section(main, "SALIDA", bg, fg_dim, border)
@@ -1154,6 +1159,23 @@ class VideoAnalyzerGUI:
             messagebox.showerror("Error", f"Archivo no encontrado:\n{self.video_path}")
             return
 
+        # Validar API key si se usa Claude antes de iniciar proceso
+        if self.config.get('ai_provider') == 'claude':
+            current_key = (self.config.get('claude_api_key') or '').strip() or os.environ.get('ANTHROPIC_API_KEY', '').strip()
+            if not current_key:
+                from tkinter import simpledialog
+                prompt_key = simpledialog.askstring(
+                    "API Key de Claude",
+                    "Ingresa tu API Key de Claude (Anthropic):\n(Se mantendrá solo en memoria durante esta sesión)",
+                    show="*",
+                    parent=self.root
+                )
+                if prompt_key and prompt_key.strip():
+                    self.config['claude_api_key'] = prompt_key.strip()
+                else:
+                    messagebox.showwarning("API Key requerida", "Se requiere una API Key de Claude para continuar el análisis.")
+                    return
+
         self.is_processing = True
         self._reset_progress()
 
@@ -1487,10 +1509,10 @@ A quien va dirigido este contenido.""",
     def _query_claude(self, instruction, text):
         """Consulta Claude API"""
         cfg = self.config
-        api_key = cfg.get('claude_api_key', '')
+        api_key = (cfg.get('claude_api_key') or '').strip() or os.environ.get('ANTHROPIC_API_KEY', '').strip()
 
         if not api_key:
-            raise ValueError("API Key de Claude no configurada. Ve a Ajustes > Configuracion Avanzada.")
+            raise ValueError("API Key de Claude no configurada. Ingresa tu API Key en la interfaz o define ANTHROPIC_API_KEY.")
 
         try:
             import anthropic
