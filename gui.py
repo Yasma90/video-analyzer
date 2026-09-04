@@ -551,7 +551,7 @@ class SettingsDialog:
 class VideoAnalyzerGUI:
     """Interfaz grafica moderna para Video Analyzer"""
 
-    VERSION = "2.0"
+    VERSION = "1.0.0"
 
     def __init__(self):
         self.config = load_config()
