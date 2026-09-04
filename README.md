@@ -1,321 +1,184 @@
-# Video Analyzer v1.0.0
+# Video Analyzer
 
-Aplicación para **transcribir y analizar videos** usando IA (Whisper + Ollama/Claude).
-Soporta procesamiento 100% local con Ollama o en la nube con Claude AI (Anthropic).
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Release-v1.0.0-green.svg)](CHANGELOG.md)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
 
-## Novedades v1.0.0
+**Video Analyzer** is an AI-powered desktop and command-line application that transcribes video files into text and generates comprehensive executive summaries, key takeaway points, and structured analyses. It supports **100% offline, private execution** via [OpenAI Whisper](https://github.com/openai/whisper) and [Ollama](https://ollama.com), as well as cloud-powered high-reasoning intelligence via [Anthropic Claude AI](https://anthropic.com).
 
-- **🤖 Soporte para Claude AI** - Modelos Claude (Sonnet 4.5, Opus 4.5, 3.5 Sonnet, 3.5 Haiku)
-- **🔄 Selector de proveedor IA** - Alterna entre Ollama (local) y Claude (API)
-- **🔐 Seguridad de credenciales** - API Key obtenida mediante la UI (en memoria de sesión) o vía `ANTHROPIC_API_KEY`, sin persistencia en texto plano en disco
-- **📁 Drag & Drop** - Arrastra videos directamente a la interfaz
-- **⚡ Sistema de caché** - Caché de transcripción para reanudar o reanalizar rápidamente
-- **📄 Visor de reportes** - Previsualizador integrado con soporte Markdown
-- **📜 Changelog & Licencia** - Registro de cambios formal ([CHANGELOG.md](CHANGELOG.md)) y licencia MIT oficial ([LICENSE](LICENSE))
+---
 
-## Novedades v2.0
+## ✨ Features
 
-- **Interfaz moderna** con diseño de cards y layout mejorado
-- **Temas Dark/Light** con toggle y persistencia
-- **Configuracion automatica** segun GPU detectada
-- **Panel de ajustes avanzados** (modelos, temperatura, contexto)
-- **Previsualizador de reportes** integrado con formato Markdown
-- **Analisis 100% en español** garantizado
-- **Estados de botones** claros durante el procesamiento
-- **Atajos de teclado** para operaciones rapidas
+- **🎙️ Automatic Speech-to-Text**: High-accuracy multi-lingual transcription powered by OpenAI Whisper (from `tiny` to `large`).
+- **🤖 Dual AI Inference Engine**:
+  - **Local & Private**: Run open-source LLMs locally via Ollama (`llama3.1`, `mistral`, `codellama`).
+  - **Cloud Reasoning**: Leverage Anthropic Claude (`Sonnet 4.5`, `Opus 4.5`, `3.5 Sonnet`, `3.5 Haiku`).
+- **🔐 Secure Credential Management**:
+  - Claude API keys are input interactively through the UI and stored strictly in session memory.
+  - No sensitive keys or tokens are ever committed or persisted in plain-text disk files.
+  - Full support for the `ANTHROPIC_API_KEY` environment variable.
+- **⚡ Smart Transcription Cache**: Automatically caches transcriptions to avoid redundant processing when iterating on analysis prompts.
+- **🖥️ Hardware Acceleration & Auto-Detection**: Detects available NVIDIA GPU VRAM to recommend optimal Whisper model configurations.
+- **🎨 Modern Desktop UI**:
+  - Built with responsive card-based architecture.
+  - Native **Dark** and **Light** themes with instant toggling and persistence.
+  - Built-in Markdown report viewer.
+  - Native **Drag & Drop** support for video files.
+- **📦 Clean Architecture**: Senior-grade project structure following the modern Python `src/` layout with unit test coverage and modular scripts.
 
-## Caracteristicas
+---
 
-- **Transcripcion automatica** con OpenAI Whisper (local)
-- **Analisis con IA** usando Ollama (local) o Claude AI (API)
-- **Modelos Claude**: Sonnet 4.5, Opus 4.5, 3.5 Sonnet, 3.5 Haiku
-- **Aceleracion GPU** con CUDA (NVIDIA)
-- **Drag & Drop** para cargar videos facilmente
-- **Interfaz grafica** intuitiva con progreso por pasos
-- **Soporte multi-idioma**: Español, Ingles, Portugues, Frances, Aleman, Italiano
-- **Reportes en Markdown/TXT/JSON** con resumen, puntos clave y transcripcion
-- **Configuracion persistente** en archivo config.json
+## 🏗️ Repository Architecture
 
-## Requisitos
+```text
+video-analyzer/
+├── docs/                               # Detailed technical guides and references
+│   └── RECOMMENDED_CONFIGURATION.md   # Hardware benchmarks, VRAM sizing, and model selection
+├── scripts/                            # Automation scripts
+│   ├── run.bat                         # Windows CLI launcher
+│   ├── run_gui.bat                     # Windows desktop GUI launcher
+│   └── setup.bat                       # Automated setup and dependencies installer
+├── src/                                # Core package source code (src-layout)
+│   └── video_analyzer/
+│       ├── __init__.py                 # Package metadata and public exports
+│       ├── analyzer.py                 # Core video transcription & report engine
+│       └── gui.py                      # Modern Tkinter graphical user interface
+├── tests/                              # Automated test suite
+│   ├── __init__.py
+│   └── test_basic.py                   # Smoke tests and core validations
+├── .gitignore                          # Strict ignore rules for temp files, cache, and venv
+├── analyzer.py                         # Root convenience CLI entrypoint
+├── CHANGELOG.md                        # Version release history (Keep a Changelog standard)
+├── gui.py                              # Root convenience GUI entrypoint
+├── LICENSE                             # MIT License (Yasmany Reyes Gonzalez)
+├── README.md                           # Project documentation
+└── requirements.txt                    # Pinned core dependencies
+```
 
+---
+
+## 🚀 Quick Start & Installation
+
+### Prerequisites
 - **Python 3.10+**
-- **NVIDIA GPU** (recomendado, 4GB+ VRAM) o CPU
-- **Ollama** instalado con modelo descargado (para IA local)
-- **O API Key de Claude** (para usar Claude AI)
-- **FFmpeg** (incluido en el proyecto)
+- **NVIDIA GPU** with CUDA support recommended (CPU is supported as a fallback)
+- **FFmpeg** (included or installed via system package manager)
+- **Ollama** (optional, for local offline AI)
 
-## Instalacion
-
-### 1. Clonar/Descargar el proyecto
-
+### 1. Clone the Repository
 ```bash
-cd C:\Users\TuUsuario\source\repos
-git clone <repo-url> video-analyzer
+git clone https://github.com/Yasma90/video-analyzer.git
 cd video-analyzer
 ```
 
-### 2. Crear entorno virtual e instalar dependencias
-
+### 2. Environment Setup
+Create and activate a virtual environment:
 ```bash
 python -m venv venv
+
+# Windows (Command Prompt / PowerShell)
 venv\Scripts\activate
+
+# Linux / macOS
+source venv/bin/activate
+```
+
+### 3. Install Dependencies
+```bash
 pip install -r requirements.txt
 ```
 
-### 3. Para GPU NVIDIA (recomendado)
-
+For NVIDIA GPU acceleration with PyTorch CUDA:
 ```bash
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 --upgrade
 ```
 
-### 4. Configurar proveedor de IA
-
-#### Opcion A: Ollama (Local - Gratis)
-
+Or run the automated setup wizard on Windows:
 ```bash
-# Instalar Ollama desde https://ollama.com
-# Luego descargar un modelo:
-ollama pull llama2
-# o para mejor calidad:
-ollama pull llama3.1:8b
+scripts\setup.bat
 ```
 
-#### Opcion B: Claude AI (API - Requiere cuenta)
+---
 
-1. Crear cuenta en [console.anthropic.com](https://console.anthropic.com)
-2. Generar API key
-3. En la app: **Ajustes** → **Configuracion Avanzada** → Seleccionar "claude" como proveedor
-4. Pegar tu API key
+## 💻 Usage
 
-## Uso
-
-### Interfaz Grafica (Recomendado)
+### Desktop GUI (Recommended)
+Launch the graphical interface:
 
 ```bash
-# Opcion 1: Doble click o ejecucion desde terminal
+# Option 1: Convenience script
 scripts\run_gui.bat
 
-# Opcion 2: Con entorno virtual activo
-venv\Scripts\activate
+# Option 2: Direct execution
 python gui.py
 ```
 
-### Linea de Comandos (CLI)
+### Command Line Interface (CLI)
+Process videos directly from your terminal:
 
 ```bash
-# Opcion 1: Usando el script en scripts/
-scripts\run.bat "ruta\al\video.mp4" [idioma]
+# Option 1: Convenience batch script (Windows)
+scripts\run.bat "path\to\video.mp4" [language_code]
 
-# Opcion 2: Directamente con Python
-python analyzer.py "video.mp4" es
+# Option 2: Direct CLI execution
+python analyzer.py "path\to\video.mp4" es
 ```
-
-## Interfaz Grafica
-
-### Ventana Principal
-
-```
-+--------------------------------------------------+
-|  Video Analyzer              [Tema] [Ajustes]    |
-+--------------------------------------------------+
-|  +-- VIDEO --+          +-- CONFIGURACION --+    |
-|  | Arrastra  |          | Idioma: [es]       |   |
-|  | video aqui|          | Whisper: [small]   |   |
-|  +-----------+          | Ollama: [llama2]   |   |
-|                         +--------------------+   |
-|  +-- PROGRESO ---------------------------------+ |
-|  | [====60%====                    ] 02:34     | |
-|  | [OK] 1. Extraccion de audio      00:12      | |
-|  | [OK] 2. Transcripcion            01:45      | |
-|  | [>>] 3. Generando resumen        ...        | |
-|  | [ ] 4. Extrayendo puntos clave              | |
-|  | [ ] 5. Analisis detallado                   | |
-|  | [ ] 6. Guardando reporte                    | |
-|  +---------------------------------------------+ |
-|                                                  |
-|  [INICIAR ANALISIS] [CANCELAR]    [Abrir Reporte]|
-|                                                  |
-|  GPU: NVIDIA RTX A500 (4.0GB)           v2.0    |
-+--------------------------------------------------+
-```
-
-### Atajos de Teclado
-
-| Atajo | Accion |
-|-------|--------|
-| `Ctrl+O` | Seleccionar video |
-| `Enter` | Iniciar analisis |
-| `Esc` | Cancelar proceso |
-
-### Panel de Configuracion Avanzada
-
-Accesible desde el boton **[Ajustes]**:
-
-- **Modelos**:
-  - Whisper: tiny/base/small/medium/large
-  - Proveedor IA: Ollama o Claude
-  - Modelo Ollama: detecta modelos instalados automaticamente
-  - Modelo Claude: Sonnet 4.5, Opus 4.5, 3.5 Sonnet, 3.5 Haiku
-  - API Key Claude: input seguro con asteriscos
-- **Salida**: Carpeta destino, formato (md/txt/json)
-- **Procesamiento**: GPU on/off, eliminar audio temporal
-- **Ollama Avanzado**: Context window (4096-32768), Temperature (0-1)
-- **Claude Avanzado**: Max tokens (2048-8192), Temperature (0-1)
-
-### Previsualizador de Reportes
-
-Al hacer clic en **[Abrir Reporte]** se abre una ventana con:
-
-- Contenido formateado con colores (headers, timestamps, separadores)
-- Boton **[Abrir Externo]** para abrir con app del sistema
-- Boton **[Copiar Ruta]** para copiar ubicacion al portapapeles
-- Informacion de tamaño y ubicacion del archivo
-
-## Configuracion Automatica
-
-En la primera ejecucion, la aplicacion detecta tu GPU y configura automaticamente:
-
-| VRAM GPU | Modelo Whisper |
-|----------|----------------|
-| >= 10GB | large |
-| >= 5GB | medium |
-| >= 2GB | small |
-| >= 1GB | base |
-| < 1GB / CPU | tiny |
-
-La configuracion se guarda en `config.json` y persiste entre sesiones.
-
-## Estructura del Proyecto
- 
-```
-video-analyzer/
-├── docs/                            # Documentacion complementaria
-│   └── CONFIGURACION_RECOMENDADA.md # Guia de hardware, VRAM y modelos
-├── scripts/                         # Scripts de ejecucion y setup
-│   ├── run.bat                      # Lanzador CLI para transcripcion y analisis
-│   ├── run_gui.bat                  # Lanzador directo de la interfaz grafica
-│   └── setup.bat                    # Script de instalacion de dependencias
-├── analyzer.py                      # Motor principal de transcripcion y analisis (CLI)
-├── gui.py                           # Interfaz grafica moderna v1.0.0
-├── requirements.txt                 # Dependencias Python fijadas
-├── CHANGELOG.md                     # Historial de versiones (Keep a Changelog)
-├── LICENSE                          # Licencia MIT (Yasmany Reyes Gonzalez)
-├── README.md                        # Documentacion principal
-└── config.json                      # Configuracion local del usuario (ignorado en git)
-```
-
-## Modelos Whisper Disponibles
-
-| Modelo | VRAM | Precision | Velocidad |
-|--------|------|-----------|-----------|
-| tiny | ~1GB | Basica | Muy rapido |
-| base | ~1GB | Aceptable | Rapido |
-| small | ~2GB | Buena | Medio |
-| medium | ~5GB | Muy buena | Lento |
-| large | ~10GB | Excelente | Muy lento |
-
-## Formatos de Salida
-
-### Markdown (.md) - Por defecto
-
-```markdown
-# ANALISIS DE VIDEO
-
-**Archivo:** reunion_equipo.mp4
-**Fecha:** 2024-01-07 20:13
-**Duracion:** 16.3 minutos
-**Modelos:** Whisper small + llama2
 
 ---
 
-## RESUMEN EJECUTIVO
+## 🔒 API Key & Credential Safety
 
-El video presenta una reunion tecnica sobre...
+When utilizing Anthropic Claude AI:
+1. **Interactive Prompt**: If no API key is detected upon starting an analysis, the application opens a secure modal prompt (`show='*'`) to receive your key.
+2. **In-Memory Only**: Keys provided through the UI are retained exclusively in volatile memory for the active session. They are **never** written into `config.json` or any tracked file.
+3. **Environment Variable**: Alternatively, export `ANTHROPIC_API_KEY`:
+   ```bash
+   # Windows PowerShell
+   $env:ANTHROPIC_API_KEY="sk-ant-..."
 
----
-
-## PUNTOS CLAVE
-
-- Punto 1: Descripcion
-- Punto 2: Descripcion
-
----
-
-## ANALISIS DETALLADO
-
-### TEMA PRINCIPAL
-...
-
-### IDEAS PRINCIPALES
-...
+   # Linux / macOS
+   export ANTHROPIC_API_KEY="sk-ant-..."
+   ```
 
 ---
 
-## TRANSCRIPCION COMPLETA
+## 🧪 Running Tests
 
-[Texto completo]
+Execute the automated test suite with standard `unittest`:
 
----
-
-## TRANSCRIPCION CON TIMESTAMPS
-
-[00:00] Primera frase...
-[00:15] Segunda frase...
+```bash
+python -m unittest discover tests
 ```
 
-### JSON (.json)
+---
 
-Estructura con campos: file, date, duration_min, summary, key_points, analysis, transcription, segments.
+## 📖 Configuration & Hardware Tuning
 
-### Texto Plano (.txt)
+For in-depth hardware profiles, VRAM requirements, and performance tips, refer to the [Recommended Configuration Guide](docs/RECOMMENDED_CONFIGURATION.md).
 
-Mismo contenido que Markdown pero sin formato.
+| Whisper Model | VRAM Required | Precision | Speed |
+|---|---|---|---|
+| `tiny` | ~1 GB | Basic | Fastest |
+| `base` | ~1 GB | Acceptable | Fast |
+| `small` | ~2 GB | Good (Balanced) | Moderate |
+| `medium` | ~5 GB | Very High | Slower |
+| `large` | ~10 GB | State-of-the-Art | Intensive |
 
-## Solucion de Problemas
+---
 
-### "CUDA not available"
+## 📄 Output Formats
 
-- Verifica que tienes GPU NVIDIA
-- Reinstala PyTorch con CUDA: `pip install torch --index-url https://download.pytorch.org/whl/cu121`
+Analyses are saved alongside the video or in your configured output folder:
+- **Markdown (`.md`)**: Full report with executive summary, bullet points, and timestamped transcript.
+- **JSON (`.json`)**: Structured dictionary including segments, metadata, and analytical sections.
+- **Text (`.txt`)**: Plain-text clean output.
 
-### "FFmpeg not found"
+---
 
-- FFmpeg debe estar en la carpeta del proyecto
-- O instalalo globalmente: `winget install ffmpeg`
+## 📜 License
 
-### "Ollama connection refused"
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
-- Asegurate que Ollama este corriendo: `ollama serve`
-
-### "API Key de Claude no configurada"
-
-- Ve a **Ajustes** → **Configuracion Avanzada**
-- Selecciona "claude" como proveedor
-- Pega tu API key de Anthropic
-
-### Transcripcion lenta
-
-- Usa modelo `small` o `base` en lugar de `medium`
-- Verifica que GPU este activa (ver status bar en GUI)
-
-### Analisis sale en ingles
-
-- v2.1 incluye prompts optimizados para español
-- Funciona tanto con Ollama como con Claude
-
-### Drag & Drop no funciona
-
-- Instala `tkinterdnd2`: `pip install tkinterdnd2`
-- O usa click para seleccionar archivos
-
-## Licencia
- 
-Este proyecto está bajo la Licencia MIT. Consulta el archivo [LICENSE](LICENSE) para más detalles.
-
-Copyright (c) 2024-2026 Yasmany Reyes Gonzalez.
-
-## Creditos
-
-- [OpenAI Whisper](https://github.com/openai/whisper) - Transcripcion
-- [Ollama](https://ollama.com) - LLMs locales
-- [MoviePy](https://zulko.github.io/moviepy/) - Procesamiento de video
+Copyright (c) 2024-2026 **Yasmany Reyes Gonzalez**.
