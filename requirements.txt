@@ -1,8 +1,12 @@
-openai-whisper
-moviepy
-ollama
+# Core dependencies
+openai-whisper>=20231117
+moviepy>=2.0
+ollama>=0.4
+anthropic>=0.40
+tkinterdnd2>=0.4
+
+# PyTorch (install separately with CUDA support for GPU acceleration):
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 torch
 torchvision
 torchaudio
-anthropic
-tkinterdnd2

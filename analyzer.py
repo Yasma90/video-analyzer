@@ -10,17 +10,18 @@ import torch
 import os
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 
 
 class VideoAnalyzer:
     """Video analyzer with Whisper + Ollama (100% local)"""
 
-    def __init__(self, whisper_model="small", ollama_model="llama2"):
+    def __init__(self, whisper_model: str = "small", ollama_model: str = "llama2"):
         self.whisper_model_name = whisper_model
         self.ollama_model = ollama_model
         self.whisper_model = None
-        self.transcription = ""
-        self.segments = []
+        self.transcription: str = ""
+        self.segments: list = []
 
         # Detect GPU
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -52,7 +53,7 @@ class VideoAnalyzer:
 
         # Extract audio
         print("Extracting audio...")
-        audio_path = Path("temp_audio.mp3")
+        audio_path = Path(f"{video_path.stem}_temp_audio.mp3")
         video = VideoFileClip(str(video_path))
         video.audio.write_audiofile(str(audio_path))
         video.close()
@@ -124,7 +125,7 @@ Summarize conclusions or calls to action.
 ## AUDIENCE
 Who is this content aimed at.""")
 
-    def generate_report(self, video_path: str, output: str = None, language: str = "es") -> str:
+    def generate_report(self, video_path: str, output: Optional[str] = None, language: str = "es") -> str:
         """Generate complete report"""
         video_path = Path(video_path)
 
