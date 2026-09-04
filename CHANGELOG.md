@@ -1,43 +1,45 @@
 # Changelog
 
-Todos los cambios notables en este proyecto serán documentados en este archivo.
+All notable changes to this project will be documented in this file.
 
-El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
-y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
 ## [1.0.0] - 2026-09-04
 
 ### Added
-- Soporte para Claude AI (Anthropic) con modelos Sonnet 4.5, Opus 4.5, 3.5 Sonnet y 3.5 Haiku.
-- Selector dinámico de proveedor de IA (Ollama local / Claude API).
-- Manejo seguro de credenciales: API Key obtenida mediante la UI (en memoria de sesión) sin exponer datos sensibles en disco, con soporte para variable de entorno `ANTHROPIC_API_KEY`.
-- Sistema de caché de transcripción para recuperación y reanudación automática sin reprocesar audio.
-- Detección automática del modelo Whisper recomendado según la VRAM del sistema.
-- Control avanzado de temperatura y límite de tokens para Claude y Ollama.
-- Soporte Drag & Drop para carga directa de videos en la interfaz.
-- Previsualizador integrado de reportes Markdown en la ventana principal.
-- Función de limpieza de caché y temporales desde la GUI.
-- Documentación de configuración recomendada (`CONFIGURACION_RECOMENDADA.md`).
-- Licencia MIT a nombre de Yasmany Reyes Gonzalez.
+- Full Anthropic Claude AI integration supporting Sonnet 4.5, Opus 4.5, 3.5 Sonnet, and 3.5 Haiku.
+- Dynamic AI provider selector allowing switching between local Ollama and Cloud Claude API.
+- Secure credential management: Claude API keys are input via the UI (held in session memory only, never written to plain-text disk files) with seamless fallback to `ANTHROPIC_API_KEY`.
+- Automatic transcription cache recovery system to prevent redundant Whisper re-computations.
+- Hardware-assisted Whisper model recommendation engine matching local GPU VRAM.
+- Advanced inference controls: token limits and temperature adjustment for both Ollama and Claude.
+- Native Drag & Drop support for video file loading.
+- Integrated Markdown report previewer directly within the main application window.
+- In-app cache and temporary artifact cleanup functionality.
+- Senior-level standard repository architecture adopting the Python `src/` layout (`src/video_analyzer`), `tests/`, `scripts/`, and `docs/`.
+- Automated test suite in `tests/test_basic.py`.
+- Comprehensive English documentation guide ([docs/RECOMMENDED_CONFIGURATION.md](docs/RECOMMENDED_CONFIGURATION.md)).
+- Official MIT License attributed to Yasmany Reyes Gonzalez.
 
 ### Changed
-- Interfaz gráfica rediseñada con componentes tipo card y temas Dark y Light.
-- Rutas de audio temporal generadas por hash/nombre de video para evitar colisiones.
-- Dependencias con versiones mínimas fijadas en `requirements.txt` para compilaciones reproducibles.
-- Tipado estático (type hints) en métodos públicos de `analyzer.py`.
-- Ignorado de archivos de depuración y temporales (`*_temp_audio.mp3`, `error_log.txt`, `*_cache.json`).
+- Complete modern UI overhaul featuring card-based styling, refined color palettes, and persistent Dark/Light theme toggle.
+- Isolated, video-specific temporary audio files preventing naming collisions during concurrent execution.
+- Dependency specifications pinned with minimum versions in `requirements.txt` for reliable, reproducible builds.
+- Complete type hinting across public API methods in `analyzer.py`.
+- Windows automation scripts moved to `scripts/` with relative root resolution and English prompts.
 
 ### Fixed
-- Corrección de modelo mostrado en encabezado de reporte cuando el proveedor activo es Claude.
-- Sustitución de 9 cláusulas `except:` genéricas por captura de excepciones específicas.
-- Eliminación de importaciones redundantes (`json` en procesamiento).
-- Visibilidad condicional de campos de configuración según el proveedor de IA activo.
+- Fixed bug where Markdown reports showed the Ollama model name even when Claude was the active provider.
+- Replaced 9 generic bare `except:` clauses with specific exception handling (`AttributeError`, `OSError`, `RuntimeError`, etc.).
+- Removed redundant module-level imports in video processing routines.
+- Fixed UI component visibility logic when toggling between AI providers in Settings.
 
 ## [0.1.0] - 2024-05-10
 
 ### Added
-- Lanzamiento inicial con OpenAI Whisper y Ollama local.
-- Extracción de audio y transcripción automática.
-- Generación de resúmenes y puntos clave estructurados.
+- Initial release featuring OpenAI Whisper speech-to-text and local Ollama model execution.
+- Automated audio extraction from video files using MoviePy.
+- CLI generation of Markdown summary, key takeaway points, and timestamped transcripts.
