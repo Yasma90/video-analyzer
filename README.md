@@ -92,20 +92,21 @@ ollama pull llama3.1:8b
 ### Interfaz Grafica (Recomendado)
 
 ```bash
-# Activar entorno virtual
-venv\Scripts\activate
+# Opcion 1: Doble click o ejecucion desde terminal
+scripts\run_gui.bat
 
-# Ejecutar GUI
+# Opcion 2: Con entorno virtual activo
+venv\Scripts\activate
 python gui.py
 ```
 
-### Linea de Comandos
+### Linea de Comandos (CLI)
 
 ```bash
-# Windows (doble click o desde CMD)
-run.bat "ruta\al\video.mp4"
+# Opcion 1: Usando el script en scripts/
+scripts\run.bat "ruta\al\video.mp4" [idioma]
 
-# O directamente con Python
+# Opcion 2: Directamente con Python
 python analyzer.py "video.mp4" es
 ```
 
@@ -185,18 +186,22 @@ En la primera ejecucion, la aplicacion detecta tu GPU y configura automaticament
 La configuracion se guarda en `config.json` y persiste entre sesiones.
 
 ## Estructura del Proyecto
-
+ 
 ```
 video-analyzer/
-├── analyzer.py          # Logica principal de analisis (CLI)
-├── gui.py               # Interfaz grafica v2.0
-├── config.json          # Configuracion persistente (auto-generado)
-├── run.bat              # Script de ejecucion rapida
-├── setup.bat            # Instalador automatico
-├── requirements.txt     # Dependencias Python
-├── venv/                # Entorno virtual
-├── ffmpeg-*/            # FFmpeg portable
-└── README.md            # Este archivo
+├── docs/                            # Documentacion complementaria
+│   └── CONFIGURACION_RECOMENDADA.md # Guia de hardware, VRAM y modelos
+├── scripts/                         # Scripts de ejecucion y setup
+│   ├── run.bat                      # Lanzador CLI para transcripcion y analisis
+│   ├── run_gui.bat                  # Lanzador directo de la interfaz grafica
+│   └── setup.bat                    # Script de instalacion de dependencias
+├── analyzer.py                      # Motor principal de transcripcion y analisis (CLI)
+├── gui.py                           # Interfaz grafica moderna v1.0.0
+├── requirements.txt                 # Dependencias Python fijadas
+├── CHANGELOG.md                     # Historial de versiones (Keep a Changelog)
+├── LICENSE                          # Licencia MIT (Yasmany Reyes Gonzalez)
+├── README.md                        # Documentacion principal
+└── config.json                      # Configuracion local del usuario (ignorado en git)
 ```
 
 ## Modelos Whisper Disponibles
