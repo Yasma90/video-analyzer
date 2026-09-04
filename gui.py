@@ -13,10 +13,10 @@ from pathlib import Path
 # DPI Awareness modo 2 - Per Monitor v2
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(2)
-except:
+except (AttributeError, OSError):
     try:
         ctypes.windll.user32.SetProcessDPIAware()
-    except:
+    except (AttributeError, OSError):
         pass
 
 # Add FFmpeg to PATH
@@ -108,10 +108,8 @@ def get_recommended_config():
     try:
         import torch
         if torch.cuda.is_available():
-            # Detectar VRAM
             vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
 
-            # Seleccionar modelo Whisper segun VRAM
             if vram_gb >= 10:
                 config['whisper_model'] = 'large'
             elif vram_gb >= 5:
@@ -127,7 +125,7 @@ def get_recommended_config():
         else:
             config['whisper_model'] = 'base'
             config['use_gpu'] = False
-    except:
+    except (ImportError, RuntimeError):
         config['whisper_model'] = 'small'
 
     return config
@@ -141,7 +139,7 @@ def load_config():
                 config = DEFAULT_CONFIG.copy()
                 config.update(saved)
                 return config
-        except:
+        except (json.JSONDecodeError, OSError, KeyError):
             pass
 
     # Primera ejecucion: generar config recomendada
@@ -163,7 +161,7 @@ def get_ollama_models():
         import ollama
         models = ollama.list()
         return [m['name'].split(':')[0] for m in models.get('models', [])]
-    except:
+    except (ImportError, ConnectionError, Exception):
         return ["llama2", "llama3", "mistral", "codellama"]
 
 def format_time(seconds):
@@ -279,7 +277,7 @@ class SettingsDialog:
                     recommended = "base"
             else:
                 recommended = "tiny"
-        except:
+        except (ImportError, RuntimeError):
             recommended = "small"
 
         whisper_combo = ttk.Combobox(row, textvariable=self.whisper_var,
@@ -560,7 +558,7 @@ class VideoAnalyzerGUI:
         try:
             dpi = self.root.winfo_fpixels('1i')
             scale = dpi / 96.0
-        except:
+        except tk.TclError:
             scale = 1.0
 
         # Tamaño más conservador
@@ -1006,7 +1004,7 @@ class VideoAnalyzerGUI:
                 else:
                     text = "GPU: No disponible (usando CPU)"
                     color = self.theme['warning']
-            except:
+            except (ImportError, RuntimeError):
                 text = "GPU: Error al verificar"
                 color = self.theme['error']
 
@@ -1186,11 +1184,9 @@ class VideoAnalyzerGUI:
     def _process_video(self):
         """Procesa el video"""
         try:
-            import json
             import torch
             import whisper
             from moviepy import VideoFileClip
-            import ollama
 
             cfg = self.config
             device = "cuda" if (cfg['use_gpu'] and torch.cuda.is_available()) else "cpu"
@@ -1362,7 +1358,6 @@ A quien va dirigido este contenido.""",
 
             # Formato del reporte
             if cfg['output_format'] == 'json':
-                import json
                 report_content = json.dumps({
                     "file": self.video_path.name,
                     "date": timestamp,
@@ -1375,12 +1370,13 @@ A quien va dirigido este contenido.""",
                 }, ensure_ascii=False, indent=2)
                 ext = "json"
             else:
+                ai_model_name = cfg.get('claude_model', 'claude')[:30] if provider == 'claude' else cfg['ollama_model']
                 report_content = f"""# ANALISIS DE VIDEO
 
 **Archivo:** {self.video_path.name}
 **Fecha:** {timestamp}
 **Duracion:** {duration/60:.1f} minutos
-**Modelos:** Whisper {cfg['whisper_model']} + {cfg['ollama_model']}
+**Modelos:** Whisper {cfg['whisper_model']} + {ai_model_name}
 
 ---
 
@@ -1465,8 +1461,8 @@ A quien va dirigido este contenido.""",
                     f.write(f"  - AI Provider: {cfg.get('ai_provider', 'N/A')}\n")
                     f.write(f"  - GPU: {cfg.get('use_gpu', 'N/A')}\n\n")
                     f.write(f"ERROR:\n{error_details}\n")
-            except:
-                pass  # Si falla guardar el log, no es crítico
+            except OSError:
+                pass
 
             # Marcar paso actual como error
             for i, ind in enumerate(self.step_indicators):
