@@ -35,7 +35,14 @@ video/
 
 # Archivos temporales
 temp_audio.mp3
+*_temp_audio.mp3
 *.tmp
+
+# Cache de transcripcion
+*_cache.json
+
+# Logs de error
+error_log.txt
 
 # IDE
 .vscode/
