@@ -30,15 +30,22 @@ class TestVideoAnalyzer(unittest.TestCase):
         self.assertEqual(format_time(65), "01:05")
         self.assertEqual(format_time(3600), "60:00")
 
-    def test_cli_entrypoints_exist(self):
-        """Verify root convenience wrappers exist and are valid files."""
+    def test_package_structure_exists(self):
+        """Verify strict src-layout structure without loose files in root."""
         root = Path(__file__).resolve().parent.parent
-        self.assertTrue((root / "analyzer.py").exists())
-        self.assertTrue((root / "gui.py").exists())
+        self.assertTrue((root / "src" / "video_analyzer" / "__init__.py").exists())
+        self.assertTrue((root / "src" / "video_analyzer" / "analyzer.py").exists())
+        self.assertTrue((root / "src" / "video_analyzer" / "gui.py").exists())
         self.assertTrue((root / "requirements.txt").exists())
         self.assertTrue((root / "CHANGELOG.md").exists())
         self.assertTrue((root / "LICENSE").exists())
         self.assertTrue((root / "README.md").exists())
+        self.assertTrue((root / "scripts" / "run.bat").exists())
+        self.assertTrue((root / "scripts" / "run_gui.bat").exists())
+        self.assertTrue((root / "scripts" / "setup.bat").exists())
+        # Ensure no loose python scripts in project root
+        self.assertFalse((root / "analyzer.py").exists())
+        self.assertFalse((root / "gui.py").exists())
 
 
 if __name__ == "__main__":

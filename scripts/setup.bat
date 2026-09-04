@@ -28,7 +28,7 @@ echo   Setup completed successfully!
 echo ========================================
 echo.
 echo Execution options:
-echo   - GUI:  scripts\run_gui.bat  or  python gui.py
+echo   - GUI:  scripts\run_gui.bat  or  python -m video_analyzer.gui
 echo   - CLI:  scripts\run.bat <video.mp4> [en|es]
 echo.
 pause

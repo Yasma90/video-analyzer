@@ -40,7 +40,7 @@ video-analyzer/
 │   ├── run.bat                         # Windows CLI launcher
 │   ├── run_gui.bat                     # Windows desktop GUI launcher
 │   └── setup.bat                       # Automated setup and dependencies installer
-├── src/                                # Core package source code (src-layout)
+├── src/                                # Core package source code (strict src-layout)
 │   └── video_analyzer/
 │       ├── __init__.py                 # Package metadata and public exports
 │       ├── analyzer.py                 # Core video transcription & report engine
@@ -49,9 +49,7 @@ video-analyzer/
 │   ├── __init__.py
 │   └── test_basic.py                   # Smoke tests and core validations
 ├── .gitignore                          # Strict ignore rules for temp files, cache, and venv
-├── analyzer.py                         # Root convenience CLI entrypoint
 ├── CHANGELOG.md                        # Version release history (Keep a Changelog standard)
-├── gui.py                              # Root convenience GUI entrypoint
 ├── LICENSE                             # MIT License (Yasmany Reyes Gonzalez)
 ├── README.md                           # Project documentation
 └── requirements.txt                    # Pinned core dependencies
@@ -108,22 +106,22 @@ scripts\setup.bat
 Launch the graphical interface:
 
 ```bash
-# Option 1: Convenience script
+# Option 1: Automation script (Windows)
 scripts\run_gui.bat
 
-# Option 2: Direct execution
-python gui.py
+# Option 2: Python module execution
+python -m video_analyzer.gui
 ```
 
 ### Command Line Interface (CLI)
 Process videos directly from your terminal:
 
 ```bash
-# Option 1: Convenience batch script (Windows)
+# Option 1: Automation batch script (Windows)
 scripts\run.bat "path\to\video.mp4" [language_code]
 
-# Option 2: Direct CLI execution
-python analyzer.py "path\to\video.mp4" es
+# Option 2: Python module execution
+python -m video_analyzer.analyzer "path\to\video.mp4" es
 ```
 
 ---
